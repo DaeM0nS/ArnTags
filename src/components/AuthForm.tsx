@@ -12,7 +12,7 @@ function getResetRedirectUrl(): string {
   return `${appUrl || window.location.origin}/update-password`
 }
 
-export default function AuthForm(): JSX.Element {
+export default function AuthForm() {
   const navigate = useNavigate()
   const [view, setView] = useState<AuthView>('login')
   const [email, setEmail] = useState('')

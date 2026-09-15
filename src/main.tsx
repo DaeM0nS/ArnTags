@@ -14,32 +14,14 @@ import { setupLiveUpdates } from './liveUpdate'
 
 import './index.css'
 
-const baseUrl = import.meta.env.DEV
-  ? 'http://localhost:5173'
-  : import.meta.env.VITE_APP_SHARE_URL ?? window.location.origin
-
 const basename = Capacitor.isNativePlatform()
   ? '/'
   : import.meta.env.DEV
     ? '/'
     : '/ArnTags-Site'
 
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    void navigator.serviceWorker
-      .register(`${baseUrl}/sw.js`, {
-        scope: `${baseUrl}/`,
-      })
-      .then((registration) => {
-        console.info('Service worker enregistré :', registration.scope)
-      })
-      .catch((error: unknown) => {
-        console.error('Erreur service worker :', error)
-      })
-  })
-}
 
-export const branch = import.meta.env.VITE_BRANCH_NAME ?? 'production'
+export const branch = import.meta.env.VITE_BRANCH_NAME ?? 'default'
 
 export const color =
   branch === 'dev'
