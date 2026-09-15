@@ -4,7 +4,7 @@ import { Dialog } from '@capacitor/dialog';
 
 const UPDATE_CHANNEL_KEY = 'update_channel';
 const UPDATE_CHANNELS_CACHE_KEY = 'update_channels_cache';
-const DEFAULT_CHANNEL = import.meta.env.VITE_BRANCH_NAME;
+const DEFAULT_CHANNEL = 'default';
 const LAST_PROMPTED_BUNDLE_KEY = 'liveupdate_last_prompted_bundle';
 
 const MANIFEST_BASE_URL = 'https://supabase.pixelmon-france.fr/storage/v1/object/public/live-updates-arntags/manifests';

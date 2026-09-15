@@ -143,32 +143,6 @@ export default function AuthForm() {
     }
   };
 
-    const handleApplyDownloadedUpdate = async () => {
-
-    try {
-      const next = await LiveUpdate.getNextBundle().catch(() => ({
-        bundleId: null,
-      }));
-
-      if (!next.bundleId) {
-        return;
-      }
-
-      const confirmed = await askAndApplySelfHostedUpdate(next.bundleId);
-
-      if (!confirmed) {
-        return;
-      }
-
-      // Petit délai pour laisser le reload se produire
-      setTimeout(() => {
-        refreshAppInfo();
-        refreshDebugInfo();
-      }, 1000);
-    } catch (error) {
-    } finally {
-    }
-  };
 
 async function handleAuth(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault()
@@ -228,22 +202,6 @@ async function handleAuth(event: FormEvent<HTMLFormElement>): Promise<void> {
 
   const isForgotPassword = view === 'forgot-password'
   const isSignUp = view === 'signup'
-
-  useEffect(() => {
-    refreshAppInfo();
-
-    const loadCurrentBundle = async () => {
-
-      const cb = await LiveUpdate.getCurrentBundle().catch(() => ({ bundleId: null }))
-      currentBundle = cb.bundleId;
-    }
-    loadCurrentBundle();
-    refreshAppInfo();
-
-    return () => {
-      setLiveUpdateDebugListener(null);
-    };
-  }, []);
 
   return (
     <main className="auth-page">
