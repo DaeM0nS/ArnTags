@@ -1,8 +1,23 @@
-import { useEffect, useState, type FormEvent, type JSX } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 import { supabase } from '../supabaseClient'
-import { askAndApplySelfHostedUpdate, fetchAvailableChannels, getLiveUpdateDebugSnapshot, getSavedUpdateChannel, getSelfHostedUpdateStatus, setLiveUpdateDebugListener } from '../liveUpdate'
+import {
+  fetchAvailableChannels,
+  getSavedUpdateChannel,
+  saveUpdateChannel,
+  getDefaultUpdateChannel,
+  getCurrentUpdateChannel,
+  getLiveUpdateDebugSnapshot,
+  setLiveUpdateDebugListener,
+  getSelfHostedUpdateStatus,
+  downloadSelfHostedUpdate,
+  askAndApplySelfHostedUpdate,
+  setLiveUpdateChannel,
+  getCurrentBundle,
+} from '../liveUpdate';
+import { Dialog } from '@capacitor/dialog';
+import { Capacitor } from '@capacitor/core';
 import { LiveUpdate } from '@capawesome/capacitor-live-update'
 
 type AuthView = 'login' | 'signup' | 'forgot-password'
@@ -27,12 +42,33 @@ export default function AuthForm() {
 
   let currentBundle;
 
-  function switchView(nextView: AuthView): void {
-    setView(nextView)
-    setPassword('')
-    setConfirmPassword('')
-    setMessage(null)
-  }
+  const refreshDebugInfo = async () => {
+
+    try {
+      const baseSnapshot = await getLiveUpdateDebugSnapshot();
+      const selfHostedStatus = await getSelfHostedUpdateStatus(
+        baseSnapshot.savedChannel
+      );
+
+      const channels = await fetchAvailableChannels();
+
+      const payload = {
+        ...baseSnapshot,
+        availableChannels: channels,
+        selfHosted: {
+          manifestUrl: `.../manifests/${baseSnapshot.savedChannel}.json`,
+          manifest: selfHostedStatus.manifest,
+          latestBundleId: selfHostedStatus.latestBundleId,
+          updateAvailable: selfHostedStatus.updateAvailable,
+          updateDownloaded: selfHostedStatus.updateDownloaded,
+        },
+        at: new Date().toISOString(),
+      };
+
+    } catch (error) {
+    } finally {
+    }
+  };
 
   const refreshAppInfo = async () => {
     try {
@@ -55,7 +91,86 @@ export default function AuthForm() {
     }
   };
 
-  async function handleAuth(event: FormEvent<HTMLFormElement>): Promise<void> {
+  useEffect(() => {
+
+    const loadChannels = async () => {
+      const cb = await LiveUpdate.getCurrentBundle().catch(() => ({ bundleId: null }))
+      currentBundle = cb.bundleId;
+    };
+
+    loadChannels();
+    refreshDebugInfo();
+    refreshAppInfo();
+
+    return () => {
+      setLiveUpdateDebugListener(null);
+    };
+  }, []);
+
+  function switchView(nextView: AuthView): void {
+    setView(nextView)
+    setPassword('')
+    setConfirmPassword('')
+    setMessage(null)
+  }
+
+  const handleCheckUpdates = async () => {
+
+    try {
+      const channel = await getSavedUpdateChannel();
+
+      const status = await getSelfHostedUpdateStatus(channel);
+
+      if (!status.manifest) {
+        return;
+      }
+
+      if (status.currentBundleId === status.latestBundleId) {
+        return;
+      }
+
+      // Cas 2 : bundle téléchargé mais pas appliqué
+      if (status.updateDownloaded && status.nextBundleId === status.latestBundleId) {
+        return;
+      }
+
+
+      await downloadSelfHostedUpdate(status.manifest);
+
+      await refreshDebugInfo();
+    } catch (error) {
+    } finally {
+    }
+  };
+
+    const handleApplyDownloadedUpdate = async () => {
+
+    try {
+      const next = await LiveUpdate.getNextBundle().catch(() => ({
+        bundleId: null,
+      }));
+
+      if (!next.bundleId) {
+        return;
+      }
+
+      const confirmed = await askAndApplySelfHostedUpdate(next.bundleId);
+
+      if (!confirmed) {
+        return;
+      }
+
+      // Petit délai pour laisser le reload se produire
+      setTimeout(() => {
+        refreshAppInfo();
+        refreshDebugInfo();
+      }, 1000);
+    } catch (error) {
+    } finally {
+    }
+  };
+
+async function handleAuth(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault()
     setMessage(null)
 
