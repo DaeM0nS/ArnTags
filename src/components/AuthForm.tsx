@@ -114,9 +114,8 @@ export default function AuthForm(): JSX.Element {
   const isForgotPassword = view === 'forgot-password'
   const isSignUp = view === 'signup'
 
-
-
   useEffect(() => {
+    refreshAppInfo();
 
     const loadCurrentBundle = async () => {
 
