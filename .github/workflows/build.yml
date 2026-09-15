@@ -28,17 +28,6 @@ jobs:
       - name: Build project
         run: npm run build:pages
 
-      - name: 🚀 Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v4
-        with:
-          deploy_key: ${{ secrets.DEPLOY_PRIVATE_KEY }}
-          external_repository: ${{ secrets.PUBLIC_REPO }}
-          publish_branch: gh-pages  # ou gh-pages
-          publish_dir: ./dist
-          force_orphan: true    # Nouvelle histoire Git
-          user_name: 'GitHub Actions'
-          user_email: 'action@github.com'
-
   build-web:
     runs-on: ubuntu-latest
     permissions:
