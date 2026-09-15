@@ -39,13 +39,6 @@ jobs:
           user_name: 'GitHub Actions'
           user_email: 'action@github.com'
 
-name: Build iOS
-on:
-  push:
-    branches: [master]
-  workflow_dispatch:
-
-jobs:
   build-web:
     runs-on: ubuntu-latest
     permissions:
