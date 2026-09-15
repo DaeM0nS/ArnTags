@@ -1,7 +1,7 @@
 name: Build and upload web page
 on:
   push:
-    branches: [default]
+    branches: [master]
   workflow_dispatch:
 
 jobs:
@@ -42,7 +42,7 @@ jobs:
 name: Build iOS
 on:
   push:
-    branches: [main]
+    branches: [master]
   workflow_dispatch:
 
 jobs:
@@ -72,13 +72,13 @@ jobs:
       - name: 📦 Create ZIP Archive
         run: |
           cd dist
-          zip -r ../MyBusinessCards-Site.zip .
+          zip -r ../Arntags-Site.zip .
 
       - name: 📤 Upload ZIP Artifact
         uses: actions/upload-artifact@v4
         with:
           name: site-archive
-          path: MyBusinessCards-Site.zip
+          path: Arntags-Site.zip
   ios:
     runs-on: macos-15
     steps:
@@ -133,10 +133,10 @@ jobs:
         cd ../
         cp -R App.xcarchive/Products/Applications/*.app Payload/Payload
         cd Payload
-        mv ./Payload/App.app ./Payload/MyBusinessCards.app
-        zip -r ../export/MyBusinessCards.ipa .
+        mv ./Payload/App.app ./Payload/Arntags.app
+        zip -r ../export/Arntags.ipa .
             
     - uses: actions/upload-artifact@v4
       with:
-        name: MyBusinessCards.ipa
+        name: Arntags.ipa
         path: ios/App/export/*.ipa
