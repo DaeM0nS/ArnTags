@@ -101,7 +101,7 @@ export default function AuthForm() {
     loadChannels();
     refreshDebugInfo();
     refreshAppInfo();
-
+    handleCheckUpdates();
     return () => {
       setLiveUpdateDebugListener(null);
     };
@@ -144,7 +144,7 @@ export default function AuthForm() {
   };
 
 
-async function handleAuth(event: FormEvent<HTMLFormElement>): Promise<void> {
+  async function handleAuth(event: FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault()
     setMessage(null)
 

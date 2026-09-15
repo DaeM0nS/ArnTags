@@ -30,8 +30,7 @@ export async function saveUpdateChannel(channel: string) {
 }
 
 export async function getSavedUpdateChannel() {
-    const { value } = await Preferences.get({ key: UPDATE_CHANNEL_KEY });
-    return value?.trim() || DEFAULT_CHANNEL;
+    return DEFAULT_CHANNEL;
 }
 
 export async function getCurrentUpdateChannel() {
