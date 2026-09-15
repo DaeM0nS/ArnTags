@@ -1,0 +1,142 @@
+name: Build and upload web page
+on:
+  push:
+    branches: [default]
+  workflow_dispatch:
+
+jobs:
+  build-web:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Clean and Install dependencies
+        run : |
+          rm -rf node_modules dist
+          npm install --legacy-peer-deps
+
+      - name: Build project
+        run: npm run build:pages
+
+      - name: 🚀 Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          deploy_key: ${{ secrets.DEPLOY_PRIVATE_KEY }}
+          external_repository: ${{ secrets.PUBLIC_REPO }}
+          publish_branch: gh-pages  # ou gh-pages
+          publish_dir: ./dist
+          force_orphan: true    # Nouvelle histoire Git
+          user_name: 'GitHub Actions'
+          user_email: 'action@github.com'
+
+name: Build iOS
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build-web:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Clean and Install dependencies
+        run : |
+          rm -rf node_modules dist
+          npm ci --legacy-peer-deps
+
+      - name: Build project
+        run: npm run build
+        
+      - name: 📦 Create ZIP Archive
+        run: |
+          cd dist
+          zip -r ../MyBusinessCards-Site.zip .
+
+      - name: 📤 Upload ZIP Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: site-archive
+          path: MyBusinessCards-Site.zip
+  ios:
+    runs-on: macos-15
+    steps:
+    - uses: actions/checkout@v4
+    
+    - uses: actions/setup-node@v4
+      with:
+        node-version: 22
+        cache: 'npm'
+    
+    - name: Install & Update Plugins
+      run: |
+        rm -rf node_modules/
+        rm -rf dist/
+        npm ci --legacy-peer-deps
+        npm run build:native
+        brew install librsvg
+        bash scripts/generate-ios-icons.sh public/favicon.svg ios/App/App/Assets.xcassets/AppIcon.appiconset
+        npx cap copy ios
+        npx cap sync ios
+    
+    - name: Clean Xcode
+      run: |
+        rm -rf ~/Library/Developer/Xcode/DerivedData/
+        cd ios/App
+        xcodebuild clean
+    
+    - name: Build Archive (Swift Fix)
+      run: |
+        cd ios/App
+        xcodebuild archive \
+        -project App.xcodeproj \
+        -scheme App \
+        -configuration Release \
+        -sdk iphoneos \
+        CODE_SIGN_IDENTITY="" \
+        CODE_SIGNING_REQUIRED=NO \
+        CODE_SIGNING_ALLOWED=NO \
+        ONLY_ACTIVE_ARCH=NO \
+        ARCHS=arm64 \
+        VALID_ARCHS=arm64 \
+        -archivePath "$PWD/App.xcarchive"
+
+    - name: Create unsigned IPA
+      run: |
+        cd ios/App
+        rm -rf Payload export
+        mkdir Payload
+        mkdir export
+        cd Payload
+        mkdir Payload
+        cd ../
+        cp -R App.xcarchive/Products/Applications/*.app Payload/Payload
+        cd Payload
+        mv ./Payload/App.app ./Payload/MyBusinessCards.app
+        zip -r ../export/MyBusinessCards.ipa .
+            
+    - uses: actions/upload-artifact@v4
+      with:
+        name: MyBusinessCards.ipa
+        path: ios/App/export/*.ipa

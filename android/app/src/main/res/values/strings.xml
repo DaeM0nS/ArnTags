@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">arntags</string>
+    <string name="title_activity_main">arntags</string>
+    <string name="package_name">fr.pixelmon_france.daem0ns.arntags</string>
+    <string name="custom_url_scheme">fr.pixelmon_france.daem0ns.arntags</string>
+</resources>
