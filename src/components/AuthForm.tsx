@@ -148,23 +148,6 @@ const refreshDebugInfo = async () => {
     };
   }, []);
 
-
-  useEffect(() => {
-
-    const loadChannels = async () => {
-      const cb = await LiveUpdate.getCurrentBundle().catch(() => ({ bundleId: null }))
-      currentBundle = cb.bundleId;
-    };
-
-    loadChannels();
-    refreshDebugInfo();
-    refreshAppInfo();
-    handleCheckUpdates();
-    return () => {
-      setLiveUpdateDebugListener(null);
-    };
-  }, []);
-
   function switchView(nextView: AuthView): void {
     setView(nextView)
     setPassword('')
