@@ -275,7 +275,16 @@ function normaliseNativeTag(value: unknown): ScannedNfcTag {
   }
 }
 
-function hasNativeBytes(record: NdefRecord): boolean {
+type NdefRecordWithNativeBytes = NdefRecord & {
+  nativeTnf: number
+  nativeType: number[]
+  nativeId: number[]
+  nativePayload: number[]
+}
+
+function hasNativeBytes(
+  record: NdefRecord,
+): record is NdefRecordWithNativeBytes {
   return (
     typeof record.nativeTnf === 'number' &&
     Array.isArray(record.nativeType) &&
