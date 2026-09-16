@@ -13,6 +13,7 @@ import AppLayout from './layouts/AppLayout'
 import { setupLiveUpdates } from './liveUpdate'
 
 import './index.css'
+import React from 'react'
 
 const basename = Capacitor.isNativePlatform()
   ? '/'
@@ -30,56 +31,62 @@ export const color =
       ? 'from-orange-500 to-fuchsia-700'
       : 'from-indigo-500 to-purple-700'
 
-type GuardProps = {
-  children: React.ReactElement
-}
-
 function LoadingScreen() {
   return <div className="app-loading">Chargement d’arntags…</div>
 }
 
-type RouteChildrenProps = {
-  children: React.ReactElement
-}
-
-function AuthRoute({ children }: GuardProps) {
+function AuthRoute({ children }: { children: React.ReactElement }) {
   const { session, loading } = useAuth()
 
   if (loading) return <LoadingScreen />
   return session ? <Navigate to="/tags" replace /> : children
 }
 
-function ProtectedRoute({ children }: RouteChildrenProps) {
+function ProtectedRoute({ children }: { children: React.ReactElement }) {
   const { session, loading } = useAuth()
 
-  if (loading) {
-    return <LoadingScreen />
-  }
-
-  return session ? children : <Navigate to="/login" replace />
+  return loading ? <LoadingScreen /> : session ? children : <Navigate to="/login" replace />;
 }
 
 function AppContent() {
-  const liveUpdateStartedRef = useRef(false)
+  const liveUpdateStartedRef = useRef(false);
 
   useEffect(() => {
-    if (!Capacitor.isNativePlatform() || liveUpdateStartedRef.current) {
-      return
-    }
+    if (!Capacitor.isNativePlatform()) return;
+    if (liveUpdateStartedRef.current) return;
+    liveUpdateStartedRef.current = true;
 
-    liveUpdateStartedRef.current = true
-    void setupLiveUpdates()
-  }, [])
+    setupLiveUpdates();
+  }, []);
 
   return (
     <Routes>
-      <Route path="/login" element={<AuthRoute><AuthForm /></AuthRoute>} />
+      <Route path="/login" element={
+        <AuthRoute>
+          <AuthForm />
+        </AuthRoute>
+      } />
       <Route path="/update-password" element={<UpdatePasswordPage />} />
 
-      <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
-        <Route path="/tags" element={<NfcTagsPage />} />
-        <Route path="/scanner" element={<NfcScannerPage />} />
-        <Route path="/profile" element={<ProfilePage />} />
+      <Route element={
+        <ProtectedRoute>
+          <AppLayout />
+        </ProtectedRoute>
+      }>
+        <Route path="/tags" element={
+          <ProtectedRoute>
+            <NfcTagsPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/scanner" element={
+          <ProtectedRoute>
+            <NfcScannerPage /></ProtectedRoute>
+        } />
+        <Route path="/profile" element={
+          <ProtectedRoute>
+            <ProfilePage />
+          </ProtectedRoute>
+        } />
       </Route>
 
       <Route path="/" element={<Navigate to="/tags" replace />} />
@@ -89,9 +96,11 @@ function AppContent() {
 }
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
-  <AuthProvider>
-    <BrowserRouter basename={basename}>
-      <AppContent />
-    </BrowserRouter>
-  </AuthProvider>,
+  <React.StrictMode>
+    <AuthProvider>
+      <BrowserRouter basename={basename}>
+        <AppContent />
+      </BrowserRouter>
+    </AuthProvider>
+  </React.StrictMode>,
 )

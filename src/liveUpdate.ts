@@ -422,8 +422,9 @@ export async function setupLiveUpdates() {
         pushDebug('ready...');
         const readyResult = await LiveUpdate.ready();
 
-        const savedChannel = await getSavedUpdateChannel();
-        const channelToUse = savedChannel || DEFAULT_CHANNEL;
+        // const savedChannel = await getSavedUpdateChannel();
+        // const channelToUse = savedChannel || DEFAULT_CHANNEL;
+        const channelToUse = DEFAULT_CHANNEL;
 
         pushDebug(
             JSON.stringify(
