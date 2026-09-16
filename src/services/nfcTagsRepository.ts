@@ -14,7 +14,6 @@ export async function getNfcTags(): Promise<NfcTag[]> {
     .order('updated_at', { ascending: false })
 
   if (error) throw error
-
   return (data ?? []).map(asNfcTag)
 }
 
@@ -26,7 +25,6 @@ export async function createNfcTag(payload: NfcTagInsert): Promise<NfcTag> {
     .single()
 
   if (error) throw error
-
   return asNfcTag(data)
 }
 
@@ -39,12 +37,22 @@ export async function updateNfcTagName(id: string, name: string): Promise<NfcTag
     .single()
 
   if (error) throw error
+  return asNfcTag(data)
+}
 
+export async function markNfcTagAsWritten(id: string): Promise<NfcTag> {
+  const { data, error } = await supabase
+    .from(tableName)
+    .update({ written_at: new Date().toISOString() })
+    .eq('id', id)
+    .select('*')
+    .single()
+
+  if (error) throw error
   return asNfcTag(data)
 }
 
 export async function deleteNfcTag(id: string): Promise<void> {
   const { error } = await supabase.from(tableName).delete().eq('id', id)
-
   if (error) throw error
 }

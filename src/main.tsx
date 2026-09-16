@@ -5,7 +5,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import AuthForm from './components/AuthForm';
 import NfcTagsPage from './components/nfc/NfcTagsPage'
 import './index.css';
-// import { setupLiveUpdates } from './liveUpdate';
+import { setupLiveUpdates } from './liveUpdate';
 
 import { Capacitor } from '@capacitor/core';
 import NfcScannerPage from './components/nfc/NfcScannerPage'
@@ -93,7 +93,7 @@ function AppContent() {
     if (liveUpdateStartedRef.current) return;
     liveUpdateStartedRef.current = true;
 
-    // setupLiveUpdates();
+    setupLiveUpdates();
   }, []);
 
   return (

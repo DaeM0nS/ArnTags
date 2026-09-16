@@ -68,6 +68,7 @@ export default function NfcScannerPage(): JSX.Element {
         records: tag.records,
         raw_ndef: tag.rawNdef,
         source: 'nfc',
+        ndef_format: tag.ndefFormat,
       })
 
       setStatus(`« ${saved.name} » a été ajouté à ton coffre.`)

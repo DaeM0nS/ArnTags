@@ -21,7 +21,7 @@
     "@capacitor/ios": "^8.2.0",
     "@capacitor/preferences": "^8.0.1",
     "@capawesome/capacitor-live-update": "^8.2.1",
-    "@capgo/capacitor-nfc": "^8.2.7",
+    "@capgo/capacitor-nfc": "^8.2.8",
     "@supabase/supabase-js": "^2.99.1",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",

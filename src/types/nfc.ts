@@ -7,6 +7,11 @@ export type NdefRecordType =
   | 'empty'
   | 'unknown'
 
+/*
+ * Record normalisé pour l’interface et la base.
+ * Les champs native* permettent un aller-retour fiable entre lecture native
+ * et écriture native : ils sont prioritaires lors de la réécriture.
+ */
 export type NdefRecord = {
   recordType: NdefRecordType | string
   mediaType: string | null
@@ -17,6 +22,11 @@ export type NdefRecord = {
   uri: string | null
   dataBase64: string | null
   dataText: string | null
+
+  nativeTnf: number | null
+  nativeType: number[] | null
+  nativeId: number[] | null
+  nativePayload: number[] | null
 }
 
 export type ScannedNfcTag = {
@@ -26,6 +36,7 @@ export type ScannedNfcTag = {
   isWritable: boolean | null
   records: NdefRecord[]
   rawNdef: Record<string, unknown> | null
+  ndefFormat: 'native' | 'web' | 'unknown'
 }
 
 export type NfcTag = {
@@ -39,6 +50,8 @@ export type NfcTag = {
   records: NdefRecord[]
   raw_ndef: Record<string, unknown> | null
   source: string
+  ndef_format?: 'native' | 'web' | 'unknown'
+  written_at?: string | null
   created_at: string
   updated_at: string
 }
@@ -53,4 +66,5 @@ export type NfcTagInsert = {
   records: NdefRecord[]
   raw_ndef: Record<string, unknown> | null
   source: string
+  ndef_format?: 'native' | 'web' | 'unknown'
 }

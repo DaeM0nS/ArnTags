@@ -1,6 +1,6 @@
 import { useEffect, useState, type JSX } from 'react'
 
-import { updateNfcTagName } from '../../services/nfcTagsRepository'
+import { markNfcTagAsWritten, updateNfcTagName } from '../../services/nfcTagsRepository'
 import { writeNfcTag } from '../../services/nfcService'
 import type { NfcTag, ScannedNfcTag } from '../../types/nfc'
 import NdefRecordsList from './NdefRecordsList'
@@ -78,14 +78,20 @@ export default function NfcTagDetails({
 
     try {
       await writeNfcTag(tag.records, setStatus)
-      setStatus('Écriture terminée.')
+
+      if (isStoredTag(tag)) {
+        const updatedTag = await markNfcTagAsWritten(tag.id)
+        onSavedChange(updatedTag)
+      }
+
+      setStatus('Écriture terminée. Le contenu NDEF a été envoyé au tag.')
     } catch (error) {
       setStatus(error instanceof Error ? error.message : 'Impossible d’écrire le tag.')
     } finally {
       setLoading(false)
     }
   }
-
+  
   const writable = getWritable(tag)
 
   return (

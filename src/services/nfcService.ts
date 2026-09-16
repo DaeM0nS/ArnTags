@@ -1,138 +1,339 @@
-import { Capacitor, registerPlugin } from '@capacitor/core'
+import { Capacitor } from '@capacitor/core'
+import {
+  CapacitorNfc,
+  type NdefRecord as NativeNdefRecord,
+} from '@capgo/capacitor-nfc'
 
 import type { NdefRecord, ScannedNfcTag } from '../types/nfc'
 
-type NativeNfcPlugin = {
-  startScanSession?: () => Promise<void>
-  stopScanSession?: () => Promise<void>
-  write?: (options: { records: unknown[] }) => Promise<void>
-  addListener: (
-    eventName: 'nfcTagScanned' | 'nfcError',
-    listenerFunc: (event: unknown) => void,
-  ) => Promise<{ remove: () => Promise<void> }>
-}
-
-const NativeNfc = registerPlugin<NativeNfcPlugin>('Nfc')
-
-const textDecoder = new TextDecoder()
 const textEncoder = new TextEncoder()
+const textDecoder = new TextDecoder()
 
-function toBase64(bytes: Uint8Array): string {
-  let binary = ''
+const TNF_EMPTY = 0x00
+const TNF_WELL_KNOWN = 0x01
+const TNF_MIME_MEDIA = 0x02
+const TNF_ABSOLUTE_URI = 0x03
+const TNF_EXTERNAL_TYPE = 0x04
+const TNF_UNKNOWN = 0x05
+const TNF_UNCHANGED = 0x06
 
-  for (const byte of bytes) {
-    binary += String.fromCharCode(byte)
-  }
+const TEXT_RECORD_TYPE = 'T'
+const URI_RECORD_TYPE = 'U'
 
-  return window.btoa(binary)
+function asObject(value: unknown): Record<string, unknown> {
+  return value !== null && typeof value === 'object'
+    ? (value as Record<string, unknown>)
+    : {}
 }
 
-function fromBase64(value: string): Uint8Array {
-  const binary = window.atob(value)
-  return Uint8Array.from(binary, (character) => character.charCodeAt(0))
-}
-
-function readPossibleBytes(value: unknown): Uint8Array {
-  if (value instanceof Uint8Array) return value
-  if (value instanceof ArrayBuffer) return new Uint8Array(value)
-  if (Array.isArray(value)) return new Uint8Array(value)
-
-  if (value && typeof value === 'object' && 'buffer' in value) {
-    const buffer = (value as { buffer?: unknown }).buffer
-    if (buffer instanceof ArrayBuffer) return new Uint8Array(buffer)
-  }
-
-  if (typeof value === 'string') return textEncoder.encode(value)
-
-  return new Uint8Array()
-}
-
-function readString(value: unknown): string | null {
+function asString(value: unknown): string | null {
   return typeof value === 'string' && value.length > 0 ? value : null
 }
 
-function normaliseRecord(value: unknown): NdefRecord {
-  const record = (value ?? {}) as Record<string, unknown>
-  const bytes = readPossibleBytes(record.data)
-  const text = readString(record.text)
-  const uri = readString(record.uri)
+function numberArray(value: unknown): number[] | null {
+  if (Array.isArray(value) && value.every((entry) => typeof entry === 'number')) {
+    return value.map((entry) => entry & 0xff)
+  }
 
-  let dataText: string | null = text ?? uri
+  if (value instanceof Uint8Array) {
+    return Array.from(value)
+  }
 
-  if (!dataText && bytes.byteLength > 0) {
-    try {
-      dataText = textDecoder.decode(bytes)
-    } catch {
-      dataText = null
+  if (value instanceof ArrayBuffer) {
+    return Array.from(new Uint8Array(value))
+  }
+
+  if (value && typeof value === 'object' && 'buffer' in value) {
+    const buffer = (value as { buffer?: unknown }).buffer
+    if (buffer instanceof ArrayBuffer) return Array.from(new Uint8Array(buffer))
+  }
+
+  return null
+}
+
+function bytes(value: number[] | null | undefined): Uint8Array {
+  return new Uint8Array(value ?? [])
+}
+
+function bytesToBase64(value: Uint8Array): string {
+  let result = ''
+  for (const byte of value) result += String.fromCharCode(byte)
+  return window.btoa(result)
+}
+
+function base64ToBytes(value: string): Uint8Array {
+  const decoded = window.atob(value)
+  return Uint8Array.from(decoded, (character) => character.charCodeAt(0))
+}
+
+function decodeUtf8(value: number[] | null): string | null {
+  if (!value || value.length === 0) return ''
+
+  try {
+    return textDecoder.decode(bytes(value))
+  } catch {
+    return null
+  }
+}
+
+function toWebNfcBufferSource(value: Uint8Array): ArrayBuffer {
+  const copy = new Uint8Array(value.byteLength)
+  copy.set(value)
+  return copy.buffer
+}
+
+function nativeTypeText(value: number[] | null): string {
+  return decodeUtf8(value) ?? ''
+}
+
+function uriPrefix(index: number): string {
+  const prefixes: Record<number, string> = {
+    0x00: '',
+    0x01: 'http://www.',
+    0x02: 'https://www.',
+    0x03: 'http://',
+    0x04: 'https://',
+    0x05: 'tel:',
+    0x06: 'mailto:',
+    0x07: 'ftp://anonymous:anonymous@',
+    0x08: 'ftp://ftp.',
+    0x09: 'ftps://',
+    0x0a: 'sftp://',
+    0x0b: 'smb://',
+    0x0c: 'nfs://',
+    0x0d: 'ftp://',
+    0x0e: 'dav://',
+    0x0f: 'news:',
+    0x10: 'telnet://',
+    0x11: 'imap:',
+    0x12: 'rtsp://',
+    0x13: 'urn:',
+    0x14: 'pop:',
+    0x15: 'sip:',
+    0x16: 'sips:',
+    0x17: 'tftp:',
+    0x18: 'btspp://',
+    0x19: 'btl2cap://',
+    0x1a: 'btgoep://',
+    0x1b: 'tcpobex://',
+    0x1c: 'irdaobex://',
+    0x1d: 'file://',
+    0x1e: 'urn:epc:id:',
+    0x1f: 'urn:epc:tag:',
+    0x20: 'urn:epc:pat:',
+    0x21: 'urn:epc:raw:',
+    0x22: 'urn:epc:',
+    0x23: 'urn:nfc:',
+  }
+
+  return prefixes[index] ?? ''
+}
+
+function recordTypeLabel(tnf: number, type: string): string {
+  if (tnf === TNF_EMPTY) return 'empty'
+  if (tnf === TNF_WELL_KNOWN && type === TEXT_RECORD_TYPE) return 'text'
+  if (tnf === TNF_WELL_KNOWN && type === URI_RECORD_TYPE) return 'url'
+  if (tnf === TNF_MIME_MEDIA) return 'mime'
+  if (tnf === TNF_ABSOLUTE_URI) return 'absolute-url'
+  if (tnf === TNF_WELL_KNOWN && type === 'Sp') return 'smart-poster'
+  if (tnf === TNF_EXTERNAL_TYPE) return 'external'
+  if (tnf === TNF_UNKNOWN || tnf === TNF_UNCHANGED) return 'unknown'
+  return 'unknown'
+}
+
+function decodeNativeText(payload: number[]): {
+  text: string | null
+  language: string | null
+  encoding: string | null
+} {
+  if (payload.length === 0) return { text: '', language: null, encoding: 'utf-8' }
+
+  const status = payload[0]
+  const isUtf16 = (status & 0x80) !== 0
+  const languageLength = status & 0x3f
+  const languageBytes = payload.slice(1, 1 + languageLength)
+  const contentBytes = payload.slice(1 + languageLength)
+
+  const encoding = isUtf16 ? 'utf-16' : 'utf-8'
+  const decoder = new TextDecoder(isUtf16 ? 'utf-16' : 'utf-8')
+
+  try {
+    return {
+      text: decoder.decode(bytes(contentBytes)),
+      language: textDecoder.decode(bytes(languageBytes)) || null,
+      encoding,
     }
+  } catch {
+    return { text: null, language: null, encoding }
+  }
+}
+
+function decodeNativeUri(payload: number[]): string | null {
+  if (payload.length === 0) return ''
+
+  try {
+    return uriPrefix(payload[0]) + textDecoder.decode(bytes(payload.slice(1)))
+  } catch {
+    return null
+  }
+}
+
+function normaliseNativeRecord(value: unknown): NdefRecord {
+  const source = asObject(value)
+  const tnfValue = source.tnf
+  const nativeTnf = typeof tnfValue === 'number' ? tnfValue : TNF_UNKNOWN
+  const nativeType = numberArray(source.type) ?? []
+  const nativeId = numberArray(source.id) ?? []
+  const nativePayload = numberArray(source.payload) ?? numberArray(source.data) ?? []
+  const typeText = nativeTypeText(nativeType)
+  const recordType = recordTypeLabel(nativeTnf, typeText)
+
+  let text: string | null = null
+  let uri: string | null = null
+  let language: string | null = null
+  let encoding: string | null = null
+  let mediaType: string | null = null
+  let dataText: string | null = null
+
+  if (recordType === 'text') {
+    const decoded = decodeNativeText(nativePayload)
+    text = decoded.text
+    language = decoded.language
+    encoding = decoded.encoding
+    dataText = text
+  } else if (recordType === 'url') {
+    uri = decodeNativeUri(nativePayload)
+    dataText = uri
+  } else if (recordType === 'mime') {
+    mediaType = typeText || 'application/octet-stream'
+    dataText = decodeUtf8(nativePayload)
+  } else if (recordType === 'absolute-url') {
+    uri = typeText || null
+    dataText = uri
+  } else {
+    dataText = decodeUtf8(nativePayload)
   }
 
   return {
-    recordType: readString(record.recordType) ?? readString(record.type) ?? 'unknown',
-    mediaType: readString(record.mediaType) ?? readString(record.mimeType),
-    id: readString(record.id),
-    encoding: readString(record.encoding),
-    language: readString(record.lang) ?? readString(record.language),
+    recordType,
+    mediaType,
+    id: nativeId.length > 0 ? decodeUtf8(nativeId) : null,
+    encoding,
+    language,
     text,
     uri,
-    dataBase64: bytes.byteLength > 0 ? toBase64(bytes) : null,
+    dataBase64: nativePayload.length > 0 ? bytesToBase64(bytes(nativePayload)) : null,
     dataText,
-  }
-}
-
-function asObject(value: unknown): Record<string, unknown> {
-  return value && typeof value === 'object' ? value as Record<string, unknown> : {}
-}
-
-function normaliseNativeTag(value: unknown): ScannedNfcTag {
-  const event = asObject(value)
-  const tag = asObject(event.nfcTag ?? event.tag ?? value)
-  const unknownRecords = tag.records ?? tag.ndefMessage ?? tag.ndefRecords ?? []
-  const records = Array.isArray(unknownRecords)
-    ? unknownRecords.map(normaliseRecord)
-    : []
-
-  const capacityValue = tag.capacity ?? tag.maxSize
-  const capacity = typeof capacityValue === 'number' ? capacityValue : null
-  const writable = tag.isWritable ?? tag.writable
-
-  return {
-    uid: readString(tag.id) ?? readString(tag.uid),
-    type: readString(tag.type) ?? readString(tag.techType),
-    capacity,
-    isWritable: typeof writable === 'boolean' ? writable : null,
-    records,
-    rawNdef: tag,
+    nativeTnf,
+    nativeType,
+    nativeId,
+    nativePayload,
   }
 }
 
 function normaliseWebRecord(record: NDEFRecord): NdefRecord {
-  const data = record.data ? new Uint8Array(record.data.buffer) : new Uint8Array()
+  const raw = record.data
+    ? Array.from(new Uint8Array(record.data.buffer.slice(0)))
+    : []
 
-  return normaliseRecord({
-    recordType: record.recordType,
-    mediaType: record.mediaType,
-    id: record.id,
-    data,
-  })
-}
-
-function nativeRecordFromRecord(record: NdefRecord): Record<string, unknown> {
   return {
-    recordType: record.recordType,
-    mediaType: record.mediaType ?? undefined,
-    id: record.id ?? undefined,
-    data: record.dataBase64
-      ? Array.from(fromBase64(record.dataBase64))
-      : record.dataText ?? record.text ?? record.uri ?? '',
+    recordType: record.recordType || 'unknown',
+    mediaType: record.mediaType || null,
+    id: record.id || null,
+    encoding: record.encoding || null,
+    language: record.lang || null,
+    text: null,
+    uri: null,
+    dataBase64: raw.length > 0 ? bytesToBase64(bytes(raw)) : null,
+    dataText: raw.length > 0 ? decodeUtf8(raw) : null,
+    nativeTnf: null,
+    nativeType: null,
+    nativeId: null,
+    nativePayload: raw,
   }
 }
 
-function toWebNfcBufferSource(bytes: Uint8Array): ArrayBuffer {
-  const copy = new Uint8Array(bytes.byteLength)
-  copy.set(bytes)
+function normaliseNativeTag(value: unknown): ScannedNfcTag {
+  const event = asObject(value)
+  const tag = asObject(event.tag ?? event.nfcTag ?? value)
+  const candidateRecords = tag.records ?? tag.ndefRecords ?? tag.ndefMessage ?? event.records ?? []
+  const records = Array.isArray(candidateRecords)
+    ? candidateRecords.map(normaliseNativeRecord)
+    : []
 
-  return copy.buffer
+  const capacityValue = tag.capacity ?? tag.maxSize
+  const writable = tag.isWritable ?? tag.writable
+
+  return {
+    uid: asString(tag.id) ?? asString(tag.uid) ?? asString(event.id),
+    type: asString(tag.type) ?? asString(tag.techType) ?? 'NDEF',
+    capacity: typeof capacityValue === 'number' ? capacityValue : null,
+    isWritable: typeof writable === 'boolean' ? writable : null,
+    records,
+    rawNdef: tag,
+    ndefFormat: 'native',
+  }
+}
+
+function hasNativeBytes(record: NdefRecord): boolean {
+  return (
+    typeof record.nativeTnf === 'number' &&
+    Array.isArray(record.nativeType) &&
+    Array.isArray(record.nativeId) &&
+    Array.isArray(record.nativePayload)
+  )
+}
+
+function fallbackNativeRecord(record: NdefRecord): NativeNdefRecord {
+  const normalizedType = record.recordType.toLowerCase()
+
+  if (normalizedType === 'text') {
+    const language = record.language || 'fr'
+    const languageBytes = Array.from(textEncoder.encode(language))
+    const textBytes = Array.from(textEncoder.encode(record.text ?? record.dataText ?? ''))
+
+    return {
+      tnf: TNF_WELL_KNOWN,
+      type: Array.from(textEncoder.encode(TEXT_RECORD_TYPE)),
+      id: record.id ? Array.from(textEncoder.encode(record.id)) : [],
+      payload: [languageBytes.length, ...languageBytes, ...textBytes],
+    }
+  }
+
+  if (normalizedType === 'url') {
+    const uri = record.uri ?? record.dataText ?? ''
+
+    return {
+      tnf: TNF_WELL_KNOWN,
+      type: Array.from(textEncoder.encode(URI_RECORD_TYPE)),
+      id: record.id ? Array.from(textEncoder.encode(record.id)) : [],
+      payload: [0x00, ...Array.from(textEncoder.encode(uri))],
+    }
+  }
+
+  const payload = record.dataBase64
+    ? Array.from(base64ToBytes(record.dataBase64))
+    : Array.from(textEncoder.encode(record.dataText ?? record.text ?? record.uri ?? ''))
+
+  return {
+    tnf: TNF_MIME_MEDIA,
+    type: Array.from(textEncoder.encode(record.mediaType ?? 'application/octet-stream')),
+    id: record.id ? Array.from(textEncoder.encode(record.id)) : [],
+    payload,
+  }
+}
+
+function nativeRecordFromRecord(record: NdefRecord): NativeNdefRecord {
+  if (hasNativeBytes(record)) {
+    return {
+      tnf: record.nativeTnf,
+      type: record.nativeType,
+      id: record.nativeId,
+      payload: record.nativePayload,
+    }
+  }
+
+  return fallbackNativeRecord(record)
 }
 
 function webRecordFromRecord(record: NdefRecord): NDEFRecordInit {
@@ -154,15 +355,17 @@ function webRecordFromRecord(record: NdefRecord): NDEFRecordInit {
     }
   }
 
-  const data: string | ArrayBuffer = record.dataBase64
-    ? toWebNfcBufferSource(fromBase64(record.dataBase64))
-    : record.dataText ?? record.text ?? record.uri ?? ''
+  const payload = record.nativePayload
+    ? bytes(record.nativePayload)
+    : record.dataBase64
+      ? base64ToBytes(record.dataBase64)
+      : textEncoder.encode(record.dataText ?? record.text ?? record.uri ?? '')
 
   return {
     recordType: record.recordType === 'unknown' ? 'mime' : record.recordType,
     mediaType: record.mediaType ?? 'application/octet-stream',
     id: record.id ?? undefined,
-    data,
+    data: toWebNfcBufferSource(payload),
   }
 }
 
@@ -170,39 +373,18 @@ export function isNfcAvailable(): boolean {
   return Capacitor.isNativePlatform() || 'NDEFReader' in window
 }
 
-export async function scanNfcTag(onProgress?: (message: string) => void): Promise<ScannedNfcTag> {
+export async function scanNfcTag(
+  onProgress?: (message: string) => void,
+): Promise<ScannedNfcTag> {
   if (Capacitor.isNativePlatform()) {
-    return new Promise(async (resolve, reject) => {
-      let scannedListener: { remove: () => Promise<void> } | undefined
-      let errorListener: { remove: () => Promise<void> } | undefined
+    onProgress?.('Approche le tag NFC du téléphone…')
 
-      const cleanup = async (): Promise<void> => {
-        await NativeNfc.stopScanSession?.().catch(() => undefined)
-        await scannedListener?.remove().catch(() => undefined)
-        await errorListener?.remove().catch(() => undefined)
-      }
-
-      try {
-        scannedListener = await NativeNfc.addListener('nfcTagScanned', (event) => {
-          void cleanup().then(() => resolve(normaliseNativeTag(event)))
-        })
-
-        errorListener = await NativeNfc.addListener('nfcError', (event) => {
-          const message = asObject(event).message
-          void cleanup().then(() => reject(new Error(readString(message) ?? 'Erreur NFC.')))
-        })
-
-        onProgress?.('Approche le tag NFC du téléphone…')
-        await NativeNfc.startScanSession?.()
-      } catch (error) {
-        await cleanup()
-        reject(error)
-      }
-    })
+    const result = await CapacitorNfc.startScanning()
+    return normaliseNativeTag(result)
   }
 
   if (!('NDEFReader' in window)) {
-    throw new Error('NFC indisponible. Utilise l’application Android/iOS ou Chrome Android avec HTTPS.')
+    throw new Error('NFC indisponible. Utilise l’application native ou Chrome Android en HTTPS.')
   }
 
   const reader = new NDEFReader()
@@ -210,10 +392,7 @@ export async function scanNfcTag(onProgress?: (message: string) => void): Promis
   onProgress?.('Approche le tag NFC du téléphone…')
 
   return new Promise((resolve, reject) => {
-    reader.onreadingerror = () => {
-      reject(new Error('Le tag NFC n’a pas pu être lu.'))
-    }
-
+    reader.onreadingerror = () => reject(new Error('Le tag NFC n’a pas pu être lu.'))
     reader.onreading = (event) => {
       resolve({
         uid: event.serialNumber || null,
@@ -222,6 +401,7 @@ export async function scanNfcTag(onProgress?: (message: string) => void): Promis
         isWritable: null,
         records: Array.from(event.message.records, normaliseWebRecord),
         rawNdef: null,
+        ndefFormat: 'web',
       })
     }
   })
@@ -235,10 +415,10 @@ export async function writeNfcTag(
     throw new Error('Ce tag sauvegardé ne contient aucun enregistrement NDEF à écrire.')
   }
 
-  onProgress?.('Approche un tag NFC réinscriptible…')
+  onProgress?.('Approche un tag NFC NDEF réinscriptible…')
 
   if (Capacitor.isNativePlatform()) {
-    await NativeNfc.write?.({
+    await CapacitorNfc.write({
       records: records.map(nativeRecordFromRecord),
     })
     return
