@@ -1,5 +1,9 @@
 package fr.pixelmon_france.daem0ns.arntags;
 
+import android.nfc.NfcAdapter;
+import android.nfc.Tag;
+import android.os.Bundle;
+
 import com.getcapacitor.BridgeActivity;
 
 public class MainActivity extends BridgeActivity {
