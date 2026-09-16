@@ -8,7 +8,7 @@ type TabItem = {
 }
 
 const tabs: TabItem[] = [
-  { to: '/tags', label: 'Coffre', icon: '▣', end: true },
+  { to: '/tags', label: 'Coffre', icon: '▣' },
   { to: '/scanner', label: 'Scanner', icon: '⌁' },
   { to: '/profile', label: 'Profil', icon: '✦' },
 ]

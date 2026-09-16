@@ -4,9 +4,13 @@ import { Dialog } from '@capacitor/dialog';
 
 const UPDATE_CHANNEL_KEY = 'update_channel';
 const UPDATE_CHANNELS_CACHE_KEY = 'update_channels_cache';
-const DEFAULT_CHANNEL = 'default';
+const DEFAULT_CHANNEL = import.meta.env.VITE_BRANCH_NAME;
 const LAST_PROMPTED_BUNDLE_KEY = 'liveupdate_last_prompted_bundle';
 
+// URL de base pour les manifests self-hosted
+// Remplace par ton propre endpoint, par exemple :
+// - https://ton-projet.supabase.co/storage/v1/object/public/live-updates/manifests
+// - https://ton-domaine.com/updates/manifests
 const MANIFEST_BASE_URL = 'https://supabase.pixelmon-france.fr/storage/v1/object/public/live-updates-arntags/manifests';
 
 let debugListener: ((text: string) => void) | null = null;
@@ -30,7 +34,8 @@ export async function saveUpdateChannel(channel: string) {
 }
 
 export async function getSavedUpdateChannel() {
-    return DEFAULT_CHANNEL;
+    const { value } = await Preferences.get({ key: UPDATE_CHANNEL_KEY });
+    return value?.trim() || DEFAULT_CHANNEL;
 }
 
 export async function getCurrentUpdateChannel() {
@@ -422,9 +427,8 @@ export async function setupLiveUpdates() {
         pushDebug('ready...');
         const readyResult = await LiveUpdate.ready();
 
-        // const savedChannel = await getSavedUpdateChannel();
-        // const channelToUse = savedChannel || DEFAULT_CHANNEL;
-        const channelToUse = DEFAULT_CHANNEL;
+        const savedChannel = await getSavedUpdateChannel();
+        const channelToUse = savedChannel || DEFAULT_CHANNEL;
 
         pushDebug(
             JSON.stringify(

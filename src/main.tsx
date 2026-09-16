@@ -1,28 +1,22 @@
-import { useEffect, useRef } from 'react'
-import ReactDOM from 'react-dom/client'
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
-import { Capacitor } from '@capacitor/core'
-
-import { AuthProvider, useAuth } from './context/AuthContext'
-import AuthForm from './components/AuthForm'
-import NfcScannerPage from './components/nfc/NfcScannerPage'
+import React, { useEffect, useRef } from 'react';
+import ReactDOM from 'react-dom/client';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { AuthProvider, useAuth } from './context/AuthContext';
+import AuthForm from './components/AuthForm';
 import NfcTagsPage from './components/nfc/NfcTagsPage'
+import './index.css';
+import { setupLiveUpdates } from './liveUpdate';
+
+import { Capacitor } from '@capacitor/core';
+import NfcScannerPage from './components/nfc/NfcScannerPage'
+import AppLayout from './layouts/AppLayout'
 import ProfilePage from './components/profile/ProfilePage'
 import UpdatePasswordPage from './components/auth/UpdatePasswordPage'
-import AppLayout from './layouts/AppLayout'
-import { setupLiveUpdates } from './liveUpdate'
 
-import './index.css'
-import React from 'react'
+const baseurl = import.meta.env.DEV ? 'http://localhost:5173' : import.meta.env.VITE_APP_SHARE_URL
+const basename = Capacitor.isNativePlatform() ? '/' : import.meta.env.DEV ? '/' : '/ArnTags-Site'
 
-const basename = Capacitor.isNativePlatform()
-  ? '/'
-  : import.meta.env.DEV
-    ? '/'
-    : '/ArnTags-Site'
-
-
-export const branch = import.meta.env.VITE_BRANCH_NAME ?? 'default'
+export const branch = import.meta.env.VITE_BRANCH_NAME
 
 export const color =
   branch === 'dev'
@@ -66,7 +60,6 @@ function AppContent() {
           <AuthForm />
         </AuthRoute>
       } />
-      <Route path="/update-password" element={<UpdatePasswordPage />} />
 
       <Route element={
         <ProtectedRoute>
@@ -88,9 +81,11 @@ function AppContent() {
           </ProtectedRoute>
         } />
       </Route>
-
-      <Route path="/" element={<Navigate to="/tags" replace />} />
-      <Route path="*" element={<Navigate to="/tags" replace />} />
+      <Route path="/update-password" element={
+        <UpdatePasswordPage />
+      } />
+      <Route path="/" element={<Navigate to="/login" replace />} />
+      <Route path="*" element={<Navigate to="/login" replace />} />
     </Routes>
   )
 }

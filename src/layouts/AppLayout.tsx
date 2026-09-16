@@ -5,7 +5,7 @@ import AppTabBar from '../components/AppTabBar'
 export default function AppLayout() {
   return (
     <div className="app-shell">
-      <Outlet />
+        <Outlet />
       <AppTabBar />
     </div>
   )

@@ -6,67 +6,48 @@ import {
   useState,
   type ReactNode,
 } from 'react'
+import { supabase } from '../supabaseClient'
 import type { Session } from '@supabase/supabase-js'
 
-import { supabase } from '../supabaseClient'
-
-type AuthContextValue = {
+type AuthContextType = {
   session: Session | null
   loading: boolean
 }
 
-const AuthContext = createContext<AuthContextValue | undefined>(undefined)
+const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
-type AuthProviderProps = {
-  children: ReactNode
-}
-
-export function AuthProvider({ children }: AuthProviderProps) {
+export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    let mounted = true
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setLoading(false);
+    });
 
-    void supabase.auth.getSession().then(({ data, error }) => {
-      if (!mounted) return
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_, session) => {
+      setSession(session);
+      setLoading(false);
+    });
 
-      if (error) {
-        console.error('Erreur récupération session Supabase :', error)
-      }
-
-      setSession(data.session)
-      setLoading(false)
-    })
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, nextSession) => {
-      if (!mounted) return
-      setSession(nextSession)
-      setLoading(false)
-    })
-
-    return () => {
-      mounted = false
-      subscription.unsubscribe()
-    }
+    return () => subscription.unsubscribe();
   }, [])
 
-  const value = useMemo<AuthContextValue>(
+  const value = useMemo<AuthContextType>(
     () => ({ session, loading }),
     [session, loading],
   )
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
+  return (
+    <AuthContext.Provider value={{ session, loading }}>
+      {children}
+    </AuthContext.Provider>
+  );
 }
 
-export function useAuth(): AuthContextValue {
-  const context = useContext(AuthContext)
-
-  if (!context) {
-    throw new Error('useAuth doit être utilisé à l’intérieur de AuthProvider.')
-  }
-
-  return context
-}
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (context === undefined) throw new Error('useAuth doit être utilisé dans AuthProvider');
+  return context;
+};

@@ -1,7 +1,10 @@
-import { useEffect, useState, type FormEvent } from 'react'
-import { useNavigate } from 'react-router-dom'
+import * as React from 'react';
+const { useState, useEffect } = React;
 
 import { supabase } from '../supabaseClient'
+import { useNavigate } from 'react-router-dom'
+import { LiveUpdate } from '@capawesome/capacitor-live-update'
+
 import {
   fetchAvailableChannels,
   getSavedUpdateChannel,
@@ -18,7 +21,7 @@ import {
 } from '../liveUpdate';
 import { Dialog } from '@capacitor/dialog';
 import { Capacitor } from '@capacitor/core';
-import { LiveUpdate } from '@capawesome/capacitor-live-update'
+import { color } from '../main';
 
 type AuthView = 'login' | 'signup' | 'forgot-password'
 
@@ -28,21 +31,39 @@ function getResetRedirectUrl(): string {
 }
 
 export default function AuthForm() {
-  const navigate = useNavigate()
   const [view, setView] = useState<AuthView>('login')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
+
   const [messageType, setMessageType] = useState<'error' | 'success'>('error')
-  const [activeChannel, setActiveChannel] = useState<string>('default');
+
+  const [showSettings, setShowSettings] = useState(false);
+  const [channelInput, setChannelInput] = useState(getDefaultUpdateChannel());
+  const [availableChannels, setAvailableChannels] = useState<string[]>([
+    getDefaultUpdateChannel(),
+  ]);
+  const [loadingChannels, setLoadingChannels] = useState(false);
+  const [channelStatus, setChannelStatus] = useState('');
+
+  const [showDebug, setShowDebug] = useState(false);
+  const [debugText, setDebugText] = useState('Aucun debug');
+  const [debugLoading, setDebugLoading] = useState(false);
+
+  const [activeChannel, setActiveChannel] = useState<string>(getDefaultUpdateChannel());
   const [currentBundleId, setCurrentBundleId] = useState<string | null>(null);
   const [currentVersionName, setCurrentVersionName] = useState<string | null>(null);
 
+  const isIOS = Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'ios';
+
+  const navigate = useNavigate();
+
   let currentBundle;
 
-  const refreshDebugInfo = async () => {
+const refreshDebugInfo = async () => {
+    setDebugLoading(true);
 
     try {
       const baseSnapshot = await getLiveUpdateDebugSnapshot();
@@ -65,8 +86,11 @@ export default function AuthForm() {
         at: new Date().toISOString(),
       };
 
+      setDebugText(JSON.stringify(payload, null, 2));
     } catch (error) {
+      setDebugText(`Erreur debug: ${String(error)}`);
     } finally {
+      setDebugLoading(false);
     }
   };
 
@@ -92,6 +116,40 @@ export default function AuthForm() {
   };
 
   useEffect(() => {
+    setLiveUpdateDebugListener(setDebugText);
+
+    const loadChannels = async () => {
+      setLoadingChannels(true);
+
+      try {
+        const saved = await getSavedUpdateChannel();
+        setChannelInput(saved);
+
+        const channels = await fetchAvailableChannels();
+        setAvailableChannels(channels);
+
+        const currentNativeChannel = await getCurrentUpdateChannel();
+        setChannelStatus(`Channel sauvegardé : ${saved} | Channel natif : ${currentNativeChannel}`);
+      } catch (error) {
+        setChannelStatus(`Erreur chargement channels : ${String(error)}`);
+      } finally {
+        setLoadingChannels(false);
+        const cb = await LiveUpdate.getCurrentBundle().catch(() => ({ bundleId: null }))
+        currentBundle = cb.bundleId;
+      }
+    };
+
+    loadChannels();
+    refreshDebugInfo();
+    refreshAppInfo();
+
+    return () => {
+      setLiveUpdateDebugListener(null);
+    };
+  }, []);
+
+
+  useEffect(() => {
 
     const loadChannels = async () => {
       const cb = await LiveUpdate.getCurrentBundle().catch(() => ({ bundleId: null }))
@@ -114,37 +172,227 @@ export default function AuthForm() {
     setMessage(null)
   }
 
+  const handleSaveChannel = async () => {
+    const normalized = channelInput.trim() || getDefaultUpdateChannel();
+
+    setLoadingChannels(true);
+    setChannelStatus('');
+
+    try {
+      const channels = await fetchAvailableChannels();
+
+      if (!channels.includes(normalized)) {
+        throw new Error(`Le channel "${normalized}" n’existe pas dans channels.json.`);
+      }
+
+      // 1. Switch + download + setNextBundle
+      const result = await (async () => {
+        const { switchToChannelAndApplyLatest } = await import('../liveUpdate');
+        return await switchToChannelAndApplyLatest(normalized);
+      })();
+
+      setChannelInput(normalized);
+      setAvailableChannels(channels);
+
+      // // Petit délai pour laisser le reset se propager
+      await new Promise(r => setTimeout(r, 500));
+
+      // 2. Déjà sur la dernière version
+      if (result.action === 'already_on_latest') {
+        setChannelStatus(`Déjà sur la dernière version du channel ${normalized}.`);
+        await refreshAppInfo();
+        await refreshDebugInfo();
+        setShowSettings(false);
+        return;
+      }
+
+      // 3. Cas A : nouvelle version téléchargée → prompt
+      if (result.action === 'new_update_downloaded') {
+        const { Dialog } = await import('@capacitor/dialog');
+
+        const confirmResult = await Dialog.confirm({
+          title: 'Mise à jour disponible',
+          message: `Une nouvelle version (${result.bundleId}) est prête. Voulez-vous redémarrer l\u2019application maintenant ?`,
+          okButtonTitle: 'Redémarrer',
+          cancelButtonTitle: 'Plus tard',
+        });
+
+        if (confirmResult.value) {
+          // Redémarrer → reload
+          setChannelStatus(`Application de la version ${result.bundleId}...`);
+          await LiveUpdate.reload();
+        } else {
+          // Plus tard → on ne fait rien, l'app reste sur l'ancienne version
+          setChannelStatus(`Version ${result.bundleId} téléchargée. Elle sera appliquée au prochain redémarrage.`);
+        }
+
+        await refreshAppInfo();
+        await refreshDebugInfo();
+        setShowSettings(false);
+        return;
+      }
+
+      // 4. Cas B : bundle déjà en local → application immédiate sans prompt
+      if (result.action === 'apply_existing_bundle') {
+        setChannelStatus(`Application de la version ${result.bundleId}...`);
+        await LiveUpdate.reload();
+
+        await refreshAppInfo();
+        await refreshDebugInfo();
+        setShowSettings(false);
+        return;
+      }
+
+      // Fallback (ne devrait pas arriver)
+      setChannelStatus(`Action inconnue : ${result.action}`);
+      await refreshAppInfo();
+      await refreshDebugInfo();
+      setShowSettings(false);
+
+
+
+
+      // const updateStatus = await getSelfHostedUpdateStatus(normalized);
+
+      // setChannelStatus(
+      //   `Channel sélectionné : ${normalized} — ` +
+      //   (updateStatus.updateAvailable
+      //     ? `update ${updateStatus.latestBundleId} disponible`
+      //     : 'déjà à jour')
+      // );
+
+      // await refreshAppInfo();
+      // await refreshDebugInfo();
+      // setShowSettings(false);
+    } catch (error) {
+      setChannelStatus(`Impossible de changer le channel : ${String(error)}`);
+    } finally {
+      setLoadingChannels(false);
+    }
+  };
+
+  const handleSelectChannel = (channel: string) => {
+    setChannelInput(channel);
+  };
+
   const handleCheckUpdates = async () => {
+    setDebugLoading(true);
 
     try {
       const channel = await getSavedUpdateChannel();
+      setDebugText(`Vérification du manifest self-hosted pour "${channel}"...`);
 
       const status = await getSelfHostedUpdateStatus(channel);
 
       if (!status.manifest) {
+        setDebugText(`Aucun manifest disponible pour "${channel}".`);
         return;
       }
 
       if (status.currentBundleId === status.latestBundleId) {
+        setDebugText('Déjà sur la dernière version.');
         return;
       }
 
       // Cas 2 : bundle téléchargé mais pas appliqué
       if (status.updateDownloaded && status.nextBundleId === status.latestBundleId) {
+        setDebugText(
+          `L’update ${status.latestBundleId} est téléchargée. Utilise “Appliquer update”.`,
+        );
         return;
       }
 
+      setDebugText(`Téléchargement de ${status.latestBundleId}...`);
 
       await downloadSelfHostedUpdate(status.manifest);
 
+      setDebugText(
+        `Update ${status.latestBundleId} téléchargée. Elle est prête à être appliquée.`
+      );
+
       await refreshDebugInfo();
     } catch (error) {
+      setDebugText(`Erreur check update: ${String(error)}`);
     } finally {
+      setDebugLoading(false);
     }
   };
 
+  const handleApplyDownloadedUpdate = async () => {
+    setDebugLoading(true);
 
-  async function handleAuth(event: FormEvent<HTMLFormElement>): Promise<void> {
+    try {
+      const next = await LiveUpdate.getNextBundle().catch(() => ({
+        bundleId: null,
+      }));
+
+      if (!next.bundleId) {
+        setDebugText('Aucune update téléchargée à appliquer.');
+        return;
+      }
+
+      const confirmed = await askAndApplySelfHostedUpdate(next.bundleId);
+
+      if (!confirmed) {
+        setDebugText('Application de l’update reportée.');
+        return;
+      }
+
+      // Petit délai pour laisser le reload se produire
+      setTimeout(() => {
+        refreshAppInfo();
+        refreshDebugInfo();
+      }, 1000);
+    } catch (error) {
+      setDebugText(`Erreur application update: ${String(error)}`);
+    } finally {
+      setDebugLoading(false);
+    }
+  };
+
+  const handleRefreshChannels = async () => {
+    setLoadingChannels(true);
+
+    try {
+      const channels = await fetchAvailableChannels();
+      const saved = await getSavedUpdateChannel();
+
+      setAvailableChannels(channels);
+      setChannelStatus(
+        `Channels chargés : ${channels.join(', ')}. Channel actuel : ${saved}`
+      );
+    } catch (error) {
+      setChannelStatus(`Erreur de récupération : ${String(error)}`);
+    } finally {
+      setLoadingChannels(false);
+    }
+  };
+
+  const handleResetToDefault = async () => {
+    try {
+      setDebugText('Retour vers le bundle natif…');
+
+      await LiveUpdate.reset();
+
+      const result = await Dialog.confirm({
+        title: 'Retour au bundle natif',
+        message: 'Le bundle OTA a été désactivé. Redémarrer maintenant ?',
+        okButtonTitle: 'Redémarrer',
+        cancelButtonTitle: 'Plus tard',
+      });
+
+      if (result.value) {
+        await LiveUpdate.reload();
+        return;
+      }
+
+      await refreshDebugInfo();
+    } catch (error) {
+      setDebugText(`Erreur reset: ${String(error)}`);
+    }
+  };
+
+  async function handleAuth(event: React.FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault()
     setMessage(null)
 
@@ -178,7 +426,7 @@ export default function AuthForm() {
     }
   }
 
-  async function handleForgotPassword(event: FormEvent<HTMLFormElement>): Promise<void> {
+  async function handleForgotPassword(event: React.FormEvent<HTMLFormElement>): Promise<void> {
     event.preventDefault()
     setMessage(null)
     setLoading(true)
@@ -232,6 +480,147 @@ export default function AuthForm() {
       </div>
 
       <section className="auth-card" aria-labelledby="auth-title">
+        {Capacitor.isNativePlatform() && (
+            <>
+              <button
+                type="button"
+                onClick={() => setShowSettings((v) => !v)}
+                className="absolute top-4 right-4 w-10 h-10 rounded-full bg-white/80 border flex items-center justify-center text-gray-700 hover:bg-white"
+                aria-label="Ouvrir les réglages"
+              >
+                ⚙️
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setShowDebug((v) => !v)}
+                className="absolute top-4 right-16 w-10 h-10 rounded-full bg-white/80 border flex items-center justify-center text-gray-700 hover:bg-white"
+                aria-label="Ouvrir le debug"
+              >
+                🐞
+              </button>
+            </>
+          )}
+
+          {showSettings && (
+            <div className="mb-6 p-4 rounded-xl bg-gray-50 border space-y-3">
+              <label className="block text-sm font-medium text-gray-700">
+                Channel d’update
+              </label>
+
+              <input
+                type="text"
+                value={channelInput}
+                onChange={(e) => setChannelInput(e.target.value)}
+                className="w-full px-3 py-2 border rounded-lg"
+                placeholder="default"
+              />
+
+              <div className="space-y-2">
+                <p className="text-xs text-gray-500">
+                  {loadingChannels
+                    ? 'Chargement des channels...'
+                    : 'Available Channels:'}
+                </p>
+
+                <div className="flex flex-wrap gap-2">
+                  {availableChannels.map((channel) => (
+                    <button
+                      key={channel}
+                      type="button"
+                      onClick={() => handleSelectChannel(channel)}
+                      className={`px-3 py-1 rounded-full border text-sm ${channelInput === channel
+                        ? 'bg-blue-600 text-white border-blue-600'
+                        : 'bg-white text-gray-700 border-gray-300'
+                        }`}
+                    >
+                      {channel}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleRefreshChannels}
+                disabled={loadingChannels}
+                className="px-3 py-2 rounded-lg border bg-white text-sm"
+              >
+                {loadingChannels ? 'Actualisation...' : 'Rafraîchir les channels'}
+              </button>
+
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={handleSaveChannel}
+                  className="px-4 py-2 rounded-lg bg-blue-600 text-white"
+                >
+                  Valider
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setChannelInput(getDefaultUpdateChannel());
+                    setShowSettings(false);
+                  }}
+                  className="px-4 py-2 rounded-lg border"
+                >
+                  Fermer
+                </button>
+              </div>
+
+              {channelStatus && (
+                <p className="text-xs text-gray-600 break-words">{channelStatus}</p>
+              )}
+            </div>
+          )}
+
+          {showDebug && (
+            <div className="mb-6 p-4 rounded-xl bg-black text-green-400 border border-gray-800 space-y-3">
+              <div className="flex gap-2 flex-wrap">
+                <button
+                  type="button"
+                  onClick={refreshDebugInfo}
+                  className="px-3 py-2 rounded-lg bg-zinc-800 text-white text-sm"
+                  disabled={debugLoading}
+                >
+                  {debugLoading ? 'Chargement...' : 'Rafraîchir le debug'}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleCheckUpdates}
+                  className="px-3 py-2 rounded-lg bg-blue-700 text-white text-sm"
+                  disabled={debugLoading}
+                >
+                  Télécharger update
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleApplyDownloadedUpdate}
+                  className="px-3 py-2 rounded-lg bg-emerald-700 text-white text-sm"
+                  disabled={debugLoading}
+                >
+                  Appliquer update
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleResetToDefault}
+                  className="px-3 py-2 rounded-lg bg-red-700 text-white text-sm"
+                  disabled={debugLoading}
+                >
+                  Reset bundle
+                </button>
+              </div>
+
+              <pre className="text-[11px] whitespace-pre-wrap break-words max-h-72 overflow-auto">
+                {debugText}
+              </pre>
+            </div>
+          )}
         <div className="auth-card__symbol" aria-hidden="true">⌁</div>
         <p className="app-eyebrow">ARNTREAL / NFC VAULT</p>
         <h1 id="auth-title">arntags</h1>
