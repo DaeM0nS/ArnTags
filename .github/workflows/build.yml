@@ -63,7 +63,7 @@ android:
       run: |
         npm ci --legacy-peer-deps
         npm run build:native
-        npx cap sync android
+        npx cap sync android 
 
     - name: Grant execute permission to Gradle Wrapper
       working-directory: android
