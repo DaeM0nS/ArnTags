@@ -255,8 +255,20 @@ function normaliseWebRecord(record: NDEFRecord): NdefRecord {
 
 function normaliseNativeTag(value: unknown): ScannedNfcTag {
   const event = asObject(value)
-  const tag = asObject(event.tag ?? event.nfcTag ?? value)
-  const candidateRecords = tag.records ?? tag.ndefRecords ?? tag.ndefMessage ?? event.records ?? []
+
+  const tag = asObject(
+    event.tag ??
+    event.nfcTag ??
+    event.data ??
+    value,
+  )
+  const candidateRecords =
+    tag.records ??
+    tag.ndefRecords ??
+    tag.ndefMessage ??
+    event.records ??
+    event.ndefRecords ??
+    []
   const records = Array.isArray(candidateRecords)
     ? candidateRecords.map(normaliseNativeRecord)
     : []
@@ -388,20 +400,141 @@ export async function scanNfcTag(
   if (Capacitor.isNativePlatform()) {
     onProgress?.('Approche le tag NFC du téléphone…')
 
-    const result = await CapacitorNfc.startScanning()
-    return normaliseNativeTag(result)
+    return new Promise<ScannedNfcTag>(async (resolve, reject) => {
+      let ndefListener: { remove: () => Promise<void> } | null = null
+      let tagListener: { remove: () => Promise<void> } | null = null
+      let mimeListener: { remove: () => Promise<void> } | null = null
+      let timeoutId: number | null = null
+      let completed = false
+
+      async function cleanup(): Promise<void> {
+        if (timeoutId !== null) {
+          window.clearTimeout(timeoutId)
+          timeoutId = null
+        }
+
+        await ndefListener?.remove().catch(() => undefined)
+        await tagListener?.remove().catch(() => undefined)
+        await mimeListener?.remove().catch(() => undefined)
+
+        /*
+         * `stopScanning()` est la méthode du plugin Capgo.
+         * Le cast est seulement là si tes typings exposent une version
+         * légèrement différente de la méthode.
+         */
+        const nfc = CapacitorNfc as unknown as {
+          stopScanning?: () => Promise<void>
+        }
+
+        await nfc.stopScanning?.().catch(() => undefined)
+      }
+
+      async function rejectScan(error: Error): Promise<void> {
+        if (completed) {
+          return
+        }
+
+        completed = true
+        await cleanup()
+        reject(error)
+      }
+
+      async function resolveTag(event: unknown): Promise<void> {
+        if (completed) {
+          return
+        }
+
+        console.info('[arntags] NFC event reçu :', event)
+
+        const tag = normaliseNativeTag(event)
+
+        /*
+         * `ndefDiscovered` doit donner au minimum une liste de records.
+         * `tagDiscovered` peut contenir un identifiant, mais aucun contenu
+         * NDEF : on l’accepte seulement si l’UID ou les records existent.
+         */
+        const hasRealTag =
+          tag.records.length > 0 ||
+          tag.uid !== null
+
+        if (!hasRealTag) {
+          console.warn(
+            '[arntags] Événement NFC ignoré : tag sans UID ni records.',
+            event,
+          )
+          return
+        }
+
+        completed = true
+        await cleanup()
+        resolve(tag)
+      }
+
+      try {
+        /*
+         * Lecture normale de tags NDEF :
+         * textes, URLs, MIME, Smart Posters, etc.
+         */
+        ndefListener = await CapacitorNfc.addListener(
+          'ndefDiscovered',
+          (event) => {
+            void resolveTag(event)
+          },
+        )
+
+        mimeListener = await CapacitorNfc.addListener(
+          'ndefMimeDiscovered',
+          (event) => {
+            void resolveTag(event)
+          },
+        )
+        /*
+         * Fallback : tag détecté, mais non reconnu comme NDEF.
+         * Cela aide à diagnostiquer un tag vierge, une carte MIFARE,
+         * un badge protégé ou un format propriétaire.
+         */
+        tagListener = await CapacitorNfc.addListener(
+          'tagDiscovered',
+          (event) => {
+            void resolveTag(event)
+          },
+        )
+
+        timeoutId = window.setTimeout(() => {
+          void rejectScan(
+            new Error(
+              'Aucun tag NFC détecté après 30 secondes. Vérifie que le NFC est activé et approche un tag NDEF compatible de la zone NFC du téléphone.',
+            ),
+          )
+        }, 30_000)
+
+        await CapacitorNfc.startScanning()
+      } catch (error) {
+        await rejectScan(
+          error instanceof Error
+            ? error
+            : new Error('Impossible de démarrer la lecture NFC.'),
+        )
+      }
+    })
   }
 
   if (!('NDEFReader' in window)) {
-    throw new Error('NFC indisponible. Utilise l’application native ou Chrome Android en HTTPS.')
+    throw new Error(
+      'NFC indisponible. Utilise l’application native ou Chrome Android en HTTPS.',
+    )
   }
 
   const reader = new NDEFReader()
+
   await reader.scan()
   onProgress?.('Approche le tag NFC du téléphone…')
 
-  return new Promise((resolve, reject) => {
-    reader.onreadingerror = () => reject(new Error('Le tag NFC n’a pas pu être lu.'))
+  return new Promise<ScannedNfcTag>((resolve, reject) => {
+    reader.onreadingerror = () => {
+      reject(new Error('Le tag NFC n’a pas pu être lu.'))
+    }
+
     reader.onreading = (event) => {
       resolve({
         uid: event.serialNumber || null,

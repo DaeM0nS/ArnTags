@@ -501,35 +501,49 @@ export default function ProfilePage() {
         )}
       </section>
 
-          <section className="bg-white/70 backdrop-blur-xl rounded-3xl shadow-2xl p-6 sm:p-8 border border-white/80">
-            <h2 className="text-xl font-bold text-gray-800 mb-4">
-              ☕ Me soutenir
-            </h2>
-            <p>Wowowow j'vais ajouter des pubs ici si tu veux cliquer.</p>
-            <div className="flex justify-center my-4">
-              <a
-                href='https://www.paypal.com/donate/?hosted_button_id=KD3TP34KH3U42'
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-2 px-6 py-3 bg-[#FFC439] hover:bg-[#F4B41A] text-black font-semibold rounded-full shadow-md transition-all transform hover:scale-105"
-              >
-                {/* Logo PayPal simplifié */}
-                <span className="italic font-extrabold text-[#003087]">Pay</span>
-                <span className="italic font-extrabold text-[#0079C1]">Pal</span>
-                <span className="ml-1 text-sm font-medium">Faire un don</span>
-              </a>
-            </div>
+      <section className="bg-white/70 backdrop-blur-xl rounded-3xl shadow-2xl p-6 sm:p-8 border border-white/80">
+        <h2 className="text-xl font-bold text-gray-800 mb-4">
+          ☕ Me soutenir
+        </h2>
+        <p>Wowowow j'vais ajouter des pubs ici si tu veux cliquer.</p>
+        <div className="flex justify-center my-4">
+          <a
+            href='https://www.paypal.com/donate/?hosted_button_id=KD3TP34KH3U42'
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-2 px-6 py-3 bg-[#FFC439] hover:bg-[#F4B41A] text-black font-semibold rounded-full shadow-md transition-all transform hover:scale-105"
+          >
+            {/* Logo PayPal simplifié */}
+            <span className="italic font-extrabold text-[#003087]">Pay</span>
+            <span className="italic font-extrabold text-[#0079C1]">Pal</span>
+            <span className="ml-1 text-sm font-medium">Faire un don</span>
+          </a>
+        </div>
 
-            <p className='flex justify-center my-4'>
-              <a href='https://checkout.revolut.com/pay/bb4a53dc-84a3-48c0-91a6-b7b622b675e3'>
-                Donation via Revolut
-                <img
-                  src="https://pixelmon-france.fr/revolutdonation.png"
-                  alt="QR Code Revolut"
-                />
-              </a>
-            </p>
-          </section>
+        <div className="my-4 flex justify-center">
+          <a
+            href="https://checkout.revolut.com/pay/bb4a53dc-84a3-48c0-91a6-b7b622b675e3"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="block w-full max-w-xs text-center"
+          >
+            <span className="block">Donation via Revolut</span>
+
+            <img
+              src="https://pixelmon-france.fr/revolutdonation.png"
+              alt="QR Code Revolut"
+              style={{
+                display: 'block',
+                width: 'min(180px, 100%)',
+                height: 'auto',
+                maxWidth: '100%',
+                margin: '0.75rem auto 0',
+                borderRadius: '0.75rem',
+              }}
+            />
+          </a>
+        </div>
+      </section>
 
       <section className="profile-list app-surface">
         <div className="profile-list__row"><span>Email</span><strong>{session?.user.email ?? 'Non disponible'}</strong></div>
