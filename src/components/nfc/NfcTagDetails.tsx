@@ -75,6 +75,16 @@ export function findArntrealProfileUrl(tag: NfcTag): string | null {
           .replace(/\/$/, '')
 
         return `https://profile.arntreal.com/${id}`
+      } else if (
+        url.protocol === 'https:' &&
+        url.hostname === 'app.arntreal.com' &&
+        /^\/effect\/[0-9a-f-]{36}\/?$/i.test(url.pathname)
+      ) {
+        const id = url.pathname
+          .replace(/^\/id\//i, '')
+          .replace(/\/$/, '')
+
+        return `https://profile.arntreal.com/${id}`
       }
     } catch {
       // Ce record ne contient pas une URL valide.
