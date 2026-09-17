@@ -52,6 +52,7 @@ export type NfcTag = {
   source: string
   display_order: number
   is_favorite: boolean
+  profile_data?: ArntrealProfileData | null
   ndef_format?: 'native' | 'web' | 'unknown'
   written_at?: string | null
   created_at: string
@@ -71,4 +72,35 @@ export type NfcTagInsert = {
   display_order?: number
   is_favorite?: boolean
   ndef_format?: 'native' | 'web' | 'unknown'
+}
+
+export type ArntrealProfileData = {
+  sourceUrl: string
+  fetchedAt: string
+  connected: boolean | null
+  owner: string | null
+  clothingName: string | null
+  clothingImageUrl: string | null
+  clothingLevel: number | null
+  clothingXp: {
+    current: number | null
+    required: number | null
+    total: number | null
+  }
+  rawText: string | null
+  rawData: {
+    assetId: string | null
+    arNfc: string | null
+    assetSku: string | null
+    assetType: string | null
+    maxLevel: number | null
+    activeEffectName: string | null
+    activeEffectImageUrl: string | null
+    season: number | null
+    totalXp: number | null
+  }
+  parser: {
+    strategy: 'next-flight-regex'
+    matched: string[]
+  }
 }

@@ -1,5 +1,6 @@
+import { findArntrealProfileUrl } from '../components/nfc/NfcTagDetails'
 import { supabase } from '../supabaseClient'
-import type { NfcTag, NfcTagInsert } from '../types/nfc'
+import type { ArntrealProfileData, NfcTag, NfcTagInsert } from '../types/nfc'
 
 const tableName = 'nfc_tags'
 
@@ -123,4 +124,104 @@ export async function updateNfcTagPosition(
   }
 
   return asNfcTag(data)
+}
+
+export async function fetchArntrealProfile(
+  url: string,
+): Promise<ArntrealProfileData> {
+  const { data, error } = await supabase.functions.invoke(
+    'scrape-arntreal-profile',
+    {
+      body: {
+        url,
+      },
+    },
+  )
+
+  if (error) {
+    throw error
+  }
+
+  /*
+   * L’Edge Function renvoie un éventuel message dans `error`
+   * avec un code HTTP 200/400 selon sa configuration.
+   */
+  if (
+    !data ||
+    typeof data !== 'object' ||
+    ('error' in data && typeof data.error === 'string')
+  ) {
+    const details =
+      data &&
+      typeof data === 'object' &&
+      'error' in data &&
+      typeof data.error === 'string'
+        ? data.error
+        : 'Réponse Arntreal invalide.'
+
+    throw new Error(details)
+  }
+
+  return data as ArntrealProfileData
+}
+
+export async function updateNfcTagProfile(
+  id: string,
+  profile: ArntrealProfileData,
+): Promise<NfcTag> {
+  const { data, error } = await supabase
+    .from(tableName)
+    .update({
+      profile_data: profile,
+    })
+    .eq('id', id)
+    .select('*')
+    .single()
+
+  if (error) {
+    throw error
+  }
+
+  return asNfcTag(data)
+}
+
+export async function refreshAllArntrealProfiles(): Promise<void> {
+  const { data: tags, error } = await supabase
+    .from(tableName)
+    .select('id, records, profile_data')
+
+  if (error) {
+    console.error('Impossible de charger les tags pour rafraîchir les profils Arntreal.', error)
+    return
+  }
+
+  const storedTags = tags.filter(
+    (t): t is NfcTag & { profile_data: null } =>
+      !t.profile_data
+  )
+
+  await Promise.allSettled(
+    storedTags.map(async (tag) => {
+      const profileUrl = findArntrealProfileUrl(tag)
+
+      if (!profileUrl) {
+        return
+      }
+
+      try {
+        const profile = await fetchArntrealProfile(profileUrl)
+
+        if (!profile.connected) {
+          return
+        }
+
+        await updateNfcTagProfile(tag.id, profile)
+      } catch (refreshError) {
+        console.log(
+          `Échec du rafraîchissement du profil Arntreal pour le tag ${tag.id}.`,
+          refreshError,
+        )
+      }
+    }),
+  )
 }

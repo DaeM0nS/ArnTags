@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react'
 
 import {
+  fetchArntrealProfile,
   markNfcTagAsWritten,
   updateNfcTagFavorite,
   updateNfcTagName,
+  updateNfcTagProfile,
 } from '../../services/nfcTagsRepository'
 import { writeNfcTag } from '../../services/nfcService'
 import type { NfcTag, ScannedNfcTag } from '../../types/nfc'
@@ -41,6 +43,47 @@ function getPosition(tag: NfcTag, totalTags: number): number {
   return Math.max(1, Math.min(safePosition, Math.max(totalTags, 1)))
 }
 
+export function findArntrealProfileUrl(tag: NfcTag): string | null {
+  for (const record of tag.records) {
+    const candidate =
+      record.uri ??
+      record.dataText ??
+      record.text
+
+    if (!candidate) {
+      continue
+    }
+
+    try {
+      const url = new URL(candidate)
+
+      if (
+        url.protocol === 'https:' &&
+        url.hostname === 'profile.arntreal.com' &&
+        /^\/[0-9a-f-]{36}\/?$/i.test(url.pathname)
+      ) {
+        const id = url.pathname.replace(/\//g, '')
+
+        return `https://profile.arntreal.com/${id}`
+      } else if (
+        url.protocol === 'https:' &&
+        url.hostname === 'app.arntreal.com' &&
+        /^\/id\/[0-9a-f-]{36}\/?$/i.test(url.pathname)
+      ) {
+        const id = url.pathname
+          .replace(/^\/id\//i, '')
+          .replace(/\/$/, '')
+
+        return `https://profile.arntreal.com/${id}`
+      }
+    } catch {
+      // Ce record ne contient pas une URL valide.
+    }
+  }
+
+  return null
+}
+
 export default function NfcTagDetails({
   tag,
   isSaved,
@@ -55,6 +98,8 @@ export default function NfcTagDetails({
   const [position, setPosition] = useState(
     isStoredTag(tag) ? String(getPosition(tag, totalTags)) : '1',
   )
+  const [profileLoading, setProfileLoading] = useState(false)
+  const [profileError, setProfileError] = useState<string | null>(null)
 
   useEffect(() => {
     setName(isStoredTag(tag) ? tag.name : '')
@@ -152,6 +197,51 @@ export default function NfcTagDetails({
   const writable = getWritable(tag)
   const storedTag = isStoredTag(tag) ? tag : null
 
+  async function handleRefreshArntrealProfile(): Promise<void> {
+    if (!isStoredTag(tag)) {
+      return
+    }
+
+    const profileUrl = findArntrealProfileUrl(tag)
+
+    if (!profileUrl) {
+      setProfileError(
+        'Aucune URL de profil Arntreal n’a été trouvée dans ce tag.',
+      )
+      return
+    }
+
+    setProfileLoading(true)
+    setProfileError(null)
+
+    try {
+      const profile = await fetchArntrealProfile(profileUrl)
+
+      /*
+       * Optionnel mais utile :
+       * si la fonction ne reconnaît aucun vêtement, on informe clairement
+       * l’utilisateur au lieu de stocker une réponse vide.
+       */
+      if (!profile.connected) {
+        throw new Error(
+          'Ce profil ne semble pas relié à un vêtement Arntreal actif.',
+        )
+      }
+
+      const updatedTag = await updateNfcTagProfile(tag.id, profile)
+
+      onSavedChange(updatedTag)
+    } catch (refreshError) {
+      setProfileError(
+        refreshError instanceof Error
+          ? refreshError.message
+          : 'Impossible de récupérer les informations Arntreal.',
+      )
+    } finally {
+      setProfileLoading(false)
+    }
+  }
+
   return (
     <section className="nfc-detail app-surface" aria-label="Détail du tag NFC">
       <div className="nfc-detail__top">
@@ -230,6 +320,98 @@ export default function NfcTagDetails({
           <p className="nfc-detail__organize-help">
             Les favoris apparaissent en premier. La position organise les tags à l’intérieur de leur groupe.
           </p>
+        </section>
+      )}
+      {isStoredTag(tag) && (
+        <section className="arntreal-profile app-surface">
+          <div className="arntreal-profile__header">
+            <div>
+              <p className="app-eyebrow">ARNTREAL PROFILE</p>
+              <h2>Vêtement connecté</h2>
+            </div>
+
+            <button
+              className="app-button app-button--ghost"
+              type="button"
+              disabled={profileLoading || loading}
+              onClick={() => void handleRefreshArntrealProfile()}
+            >
+              {profileLoading ? 'Récupération…' : 'Actualiser'}
+            </button>
+          </div>
+
+          {profileError && (
+            <p className="app-message app-message--error">
+              {profileError}
+            </p>
+          )}
+
+          {!tag.profile_data ? (
+            <div className="arntreal-profile__empty">
+              <span aria-hidden="true">⌁</span>
+              <p>
+                Appuie sur « Actualiser » pour récupérer les informations visibles
+                sur le profil Arntreal du tag.
+              </p>
+            </div>
+          ) : (
+            <div className="arntreal-profile__content">
+              {tag.profile_data.clothingImageUrl && (
+                <img
+                  className="arntreal-profile__image"
+                  src={tag.profile_data.clothingImageUrl}
+                  alt={
+                    tag.profile_data.clothingName ??
+                    'Vêtement Arntreal'
+                  }
+                />
+              )}
+
+              <div className="arntreal-profile__facts">
+                <div>
+                  <span>Statut</span>
+                  <strong>
+                    {tag.profile_data.connected ? 'Connecté' : 'Non connecté'}
+                  </strong>
+                </div>
+
+                <div>
+                  <span>Propriétaire</span>
+                  <strong>{tag.profile_data.owner ?? 'Inconnu'}</strong>
+                </div>
+
+                <div>
+                  <span>Vêtement</span>
+                  <strong>
+                    {tag.profile_data.clothingName ?? 'Inconnu'}
+                  </strong>
+                </div>
+
+                <div>
+                  <span>Niveau</span>
+                  <strong>
+                    {tag.profile_data.clothingLevel ?? '—'}
+                  </strong>
+                </div>
+
+                <div className="arntreal-profile__xp">
+                  <span>XP niveau</span>
+                  <strong>
+                    {tag.profile_data.clothingXp.current?.toLocaleString('fr-FR') ?? '—'}
+                    {' / '}
+                    {tag.profile_data.clothingXp.required?.toLocaleString('fr-FR') ?? '—'}
+                  </strong>
+                </div>
+
+                <div>
+                  <span>XP totale</span>
+                  <strong>
+                    {tag.profile_data.clothingXp.total?.toLocaleString('fr-FR') ?? '—'}
+                  </strong>
+                </div>
+              </div>
+            </div>
+          )}
         </section>
       )}
 
