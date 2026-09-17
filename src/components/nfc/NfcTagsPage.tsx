@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 
 import { useAuth } from '../../context/AuthContext'
 import { deleteNfcTag, getNfcTags } from '../../services/nfcTagsRepository'
+import { resetNfcTag } from '../../services/nfcService'
 import type { NfcTag } from '../../types/nfc'
 import NfcTagDetails from './NfcTagDetails'
 import CreateManualTagModal from './CreateManualTagModal'
@@ -24,6 +25,9 @@ export default function NfcTagsPage(): JSX.Element {
   const [error, setError] = useState<string | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [showManualModal, setShowManualModal] = useState(false)
+  const [showResetConfirm, setShowResetConfirm] = useState(false)
+  const [resetLoading, setResetLoading] = useState(false)
+  const [resetStatus, setResetStatus] = useState<string | null>(null)
 
   const loadTags = useCallback(async (): Promise<void> => {
     setLoading(true)
@@ -65,6 +69,33 @@ export default function NfcTagsPage(): JSX.Element {
     }
   }
 
+  async function handleResetPhysicalTag(): Promise<void> {
+    setResetLoading(true)
+    setResetStatus('Approche le tag NFC à reset et garde-le immobile…')
+    setError(null)
+
+    try {
+      await resetNfcTag(setResetStatus)
+
+      setResetStatus(
+        'Tag reset avec succès : son contenu NDEF a été effacé.',
+      )
+
+      window.setTimeout(() => {
+        setShowResetConfirm(false)
+        setResetStatus(null)
+      }, 1_200)
+    } catch (resetError) {
+      setResetStatus(
+        resetError instanceof Error
+          ? resetError.message
+          : 'Impossible de reset ce tag NFC.',
+      )
+    } finally {
+      setResetLoading(false)
+    }
+  }
+
   return (
     <main className="app-page nfc-page">
       <header className="nfc-page__header">
@@ -73,6 +104,15 @@ export default function NfcTagsPage(): JSX.Element {
           <h1>Mon coffre</h1>
           <p className="nfc-page__subtitle">Tes données NDEF sauvegardées, privées et prêtes à être réécrites.</p>
         </div>
+
+        <button
+          className="app-button app-button--primary"
+          type="button"
+          onClick={() => navigate('/scanner')}
+        >
+          + Scanner
+        </button>
+
         <button
           className="app-button app-button--ghost"
           type="button"
@@ -82,11 +122,15 @@ export default function NfcTagsPage(): JSX.Element {
         </button>
 
         <button
-          className="app-button app-button--primary"
+          className="app-button app-button--danger"
           type="button"
-          onClick={() => navigate('/scanner')}
+          disabled={resetLoading}
+          onClick={() => {
+            setResetStatus(null)
+            setShowResetConfirm(true)
+          }}
         >
-          + Scanner
+          - Reset un tag
         </button>
       </header>
 
@@ -142,14 +186,81 @@ export default function NfcTagsPage(): JSX.Element {
         </div>
       )}
       {showManualModal && (
-  <CreateManualTagModal
-    onClose={() => setShowManualModal(false)}
-    onCreated={(createdTag) => {
-      setTags((currentTags) => [createdTag, ...currentTags])
-      setSelectedTag(createdTag)
-    }}
-  />
-)}
+        <CreateManualTagModal
+          onClose={() => setShowManualModal(false)}
+          onCreated={(createdTag) => {
+            setTags((currentTags) => [createdTag, ...currentTags])
+            setSelectedTag(createdTag)
+          }}
+        />
+      )}
+      {showResetConfirm && (
+        <div
+          className="nfc-confirm-backdrop"
+          role="presentation"
+          onMouseDown={() => {
+            if (!resetLoading) {
+              setShowResetConfirm(false)
+              setResetStatus(null)
+            }
+          }}
+        >
+          <section
+            className="nfc-confirm-dialog"
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="reset-tag-title"
+            aria-describedby="reset-tag-description"
+            onMouseDown={(event) => event.stopPropagation()}
+          >
+            <div className="nfc-confirm-dialog__icon" aria-hidden="true">
+              !
+            </div>
+
+            <p className="app-eyebrow">ACTION IRRÉVERSIBLE</p>
+            <h2 id="reset-tag-title">Reset un tag NFC ?</h2>
+
+            <p id="reset-tag-description">
+              Le prochain tag physique approché sera effacé.
+              Son contenu NDEF sera supprimé.
+            </p>
+
+            <p className="nfc-confirm-dialog__warning">
+              L’UID matériel, les clés et les protections du tag ne seront pas
+              modifiés.
+            </p>
+
+            {resetStatus && (
+              <p className="app-message app-message--success">
+                {resetStatus}
+              </p>
+            )}
+
+            <div className="nfc-confirm-dialog__actions">
+              <button
+                className="app-button app-button--ghost"
+                type="button"
+                disabled={resetLoading}
+                onClick={() => {
+                  setShowResetConfirm(false)
+                  setResetStatus(null)
+                }}
+              >
+                Annuler
+              </button>
+
+              <button
+                className="app-button app-button--danger"
+                type="button"
+                disabled={resetLoading}
+                onClick={() => void handleResetPhysicalTag()}
+              >
+                {resetLoading ? 'Reset en cours…' : 'Oui, reset le tag'}
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
     </main>
   )
 }

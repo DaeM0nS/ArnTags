@@ -693,3 +693,133 @@ export async function writeNfcTag(
     }
   })
 }
+
+export async function resetNfcTag(
+  onProgress?: (message: string) => void,
+): Promise<void> {
+  onProgress?.('Approche le tag NFC à effacer et garde-le immobile…')
+
+  if (Capacitor.isNativePlatform()) {
+    return new Promise<void>(async (resolve, reject) => {
+      let ndefListener: { remove: () => Promise<void> } | null = null
+      let tagListener: { remove: () => Promise<void> } | null = null
+      let timeoutId: number | null = null
+      let completed = false
+
+      async function cleanup(): Promise<void> {
+        if (timeoutId !== null) {
+          window.clearTimeout(timeoutId)
+          timeoutId = null
+        }
+
+        await ndefListener?.remove().catch(() => undefined)
+        await tagListener?.remove().catch(() => undefined)
+        await CapacitorNfc.stopScanning().catch(() => undefined)
+      }
+
+      async function fail(error: Error): Promise<void> {
+        if (completed) return
+
+        completed = true
+        await cleanup()
+        reject(error)
+      }
+
+      async function eraseCurrentTag(): Promise<void> {
+        if (completed) return
+
+        completed = true
+
+        try {
+          onProgress?.('Tag détecté. Effacement NDEF en cours…')
+
+          /*
+           * Le plugin écrit sur le dernier tag NFC détecté.
+           * Le tag doit rester contre le téléphone jusqu’au succès.
+           */
+          await CapacitorNfc.write({
+            records: [],
+          })
+
+          onProgress?.('Tag reset : le message NDEF a été effacé.')
+          await cleanup()
+          resolve()
+        } catch (error) {
+          await cleanup()
+
+          const errorMessage =
+            error instanceof Error ? error.message : String(error)
+
+          if (/lost|connection/i.test(errorMessage)) {
+            reject(
+              new Error(
+                'Connexion NFC perdue. Garde le tag immobile contre le téléphone pendant tout le reset.',
+              ),
+            )
+            return
+          }
+
+          reject(
+            new Error(
+              errorMessage ||
+                'Impossible d’effacer ce tag. Il est peut-être verrouillé, protégé ou non compatible NDEF.',
+            ),
+          )
+        }
+      }
+
+      try {
+        /*
+         * Il faut attendre la découverte du tag cible, puis écrire
+         * immédiatement le record NDEF vide.
+         */
+        ndefListener = await CapacitorNfc.addListener(
+          'ndefDiscovered',
+          () => {
+            void eraseCurrentTag()
+          },
+        )
+
+        tagListener = await CapacitorNfc.addListener(
+          'tagDiscovered',
+          () => {
+            void eraseCurrentTag()
+          },
+        )
+
+        timeoutId = window.setTimeout(() => {
+          void fail(
+            new Error(
+              'Aucun tag NFC détecté après 30 secondes. Approche un tag NDEF réinscriptible.',
+            ),
+          )
+        }, 30_000)
+
+        await CapacitorNfc.startScanning()
+      } catch (error) {
+        await fail(
+          error instanceof Error
+            ? error
+            : new Error('Impossible de démarrer la session NFC de reset.'),
+        )
+      }
+    })
+  }
+
+  if (!('NDEFReader' in window)) {
+    throw new Error(
+      'Le reset NFC n’est pas disponible dans ce navigateur. Utilise l’application native.',
+    )
+  }
+
+  onProgress?.('Approche le tag NFC à effacer…')
+
+  const writer = new NDEFReader()
+
+  /*
+   * Le Web NFC accepte un message NDEF vide.
+   */
+  await writer.write({
+    records: [],
+  })
+}
