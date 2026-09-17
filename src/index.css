@@ -1210,3 +1210,174 @@ p {
     width: 100%;
   }
 }
+
+.nfc-toolbar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.75rem;
+  padding: 0.7rem;
+}
+
+.nfc-search {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 0.55rem;
+  border: 1px solid rgba(159, 107, 242, 0.28);
+  border-radius: 0.7rem;
+  background: rgba(10, 1, 30, 0.62);
+  padding: 0 0.7rem;
+  transition: border-color 180ms ease, box-shadow 180ms ease;
+}
+
+.nfc-search:focus-within {
+  border-color: var(--arn-violet-light);
+  box-shadow: 0 0 0 3px rgba(158, 73, 255, 0.16);
+}
+
+.nfc-search__icon {
+  color: #b989ff;
+  font-size: 1.2rem;
+  line-height: 1;
+}
+
+.nfc-search input {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  padding: 0.8rem 0;
+  color: var(--arn-text);
+  font-size: 16px;
+}
+
+.nfc-search input::placeholder {
+  color: #746a92;
+}
+
+.nfc-search__clear {
+  display: grid;
+  width: 1.7rem;
+  height: 1.7rem;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 50%;
+  background: rgba(130, 69, 213, 0.25);
+  color: #e8d9ff;
+  font-size: 1.15rem;
+}
+
+.nfc-search__clear:hover {
+  background: rgba(152, 71, 255, 0.42);
+}
+
+.nfc-sort {
+  display: grid;
+  gap: 0.25rem;
+  min-width: 10.5rem;
+  color: var(--arn-text-muted);
+  font-size: 0.64rem;
+  font-weight: 750;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.nfc-sort select {
+  width: 100%;
+  border: 1px solid rgba(159, 107, 242, 0.28);
+  border-radius: 0.65rem;
+  outline: 0;
+  background: rgba(10, 1, 30, 0.72);
+  padding: 0.68rem 0.7rem;
+  color: var(--arn-text);
+  font-size: 16px;
+  text-transform: none;
+}
+
+.nfc-sort select:focus {
+  border-color: var(--arn-violet-light);
+  box-shadow: 0 0 0 3px rgba(158, 73, 255, 0.16);
+}
+
+.nfc-sort option {
+  background: #170631;
+  color: #f5f1ff;
+}
+
+.nfc-order-help {
+  margin: 0;
+  color: var(--arn-text-muted);
+  font-size: 0.77rem;
+  text-align: center;
+}
+
+.nfc-tag-card__side-actions {
+  position: absolute;
+  top: 0.7rem;
+  right: 0.7rem;
+  display: grid;
+  gap: 0.45rem;
+  justify-items: end;
+}
+
+.nfc-tag-card__side-actions .nfc-tag-card__delete {
+  position: static;
+}
+
+.nfc-tag-card__order-actions {
+  display: flex;
+  overflow: hidden;
+  border: 1px solid rgba(185, 117, 255, 0.26);
+  border-radius: 0.55rem;
+  background: rgba(17, 4, 42, 0.78);
+}
+
+.nfc-tag-card__order-actions button {
+  display: grid;
+  width: 1.75rem;
+  height: 1.55rem;
+  place-items: center;
+  border-right: 1px solid rgba(185, 117, 255, 0.2);
+  background: transparent;
+  color: #dcbaff;
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.nfc-tag-card__order-actions button:last-child {
+  border-right: 0;
+}
+
+.nfc-tag-card__order-actions button:hover:not(:disabled) {
+  background: rgba(130, 56, 224, 0.38);
+}
+
+.nfc-tag-card__order-actions button:disabled {
+  color: #615476;
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.nfc-empty__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.65rem;
+}
+
+@media (max-width: 560px) {
+  .nfc-toolbar {
+    grid-template-columns: 1fr;
+  }
+
+  .nfc-sort {
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+    min-width: 0;
+  }
+
+  .nfc-sort select {
+    min-width: 0;
+  }
+}

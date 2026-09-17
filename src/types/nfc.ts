@@ -50,6 +50,7 @@ export type NfcTag = {
   records: NdefRecord[]
   raw_ndef: Record<string, unknown> | null
   source: string
+  display_order: number
   ndef_format?: 'native' | 'web' | 'unknown'
   written_at?: string | null
   created_at: string
@@ -66,5 +67,6 @@ export type NfcTagInsert = {
   records: NdefRecord[]
   raw_ndef: Record<string, unknown> | null
   source: string
+  display_order?: number
   ndef_format?: 'native' | 'web' | 'unknown'
 }

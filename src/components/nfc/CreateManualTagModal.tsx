@@ -93,6 +93,7 @@ export default function CreateManualTagModal({
         raw_ndef: null,
         source: 'manual',
         ndef_format: 'unknown',
+        display_order: 0,
       })
 
       onCreated(tag)
