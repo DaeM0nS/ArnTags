@@ -38,31 +38,40 @@ function normaliseForSearch(value: string): string {
 function sortTags(tags: NfcTag[], mode: SortMode): NfcTag[] {
   const next = [...tags]
 
-  if (mode === 'name') {
-    return next.sort((left, right) =>
-      left.name.localeCompare(right.name, 'fr-FR', {
+  const sortWithinGroup = (left: NfcTag, right: NfcTag): number => {
+    if (mode === 'name') {
+      return left.name.localeCompare(right.name, 'fr-FR', {
         sensitivity: 'base',
         numeric: true,
-      }),
-    )
-  }
+      })
+    }
 
-  if (mode === 'recent') {
-    return next.sort(
-      (left, right) =>
+    if (mode === 'recent') {
+      return (
         new Date(right.updated_at).getTime() -
-        new Date(left.updated_at).getTime(),
-    )
-  }
+        new Date(left.updated_at).getTime()
+      )
+    }
 
-  return next.sort((left, right) => {
     const orderDifference = left.display_order - right.display_order
 
     if (orderDifference !== 0) {
       return orderDifference
     }
 
-    return new Date(left.created_at).getTime() - new Date(right.created_at).getTime()
+    return (
+      new Date(left.created_at).getTime() -
+      new Date(right.created_at).getTime()
+    )
+  }
+
+  return next.sort((left, right) => {
+    /* Les favoris restent toujours au-dessus des autres. */
+    if (left.is_favorite !== right.is_favorite) {
+      return left.is_favorite ? -1 : 1
+    }
+
+    return sortWithinGroup(left, right)
   })
 }
 
@@ -112,8 +121,8 @@ export default function NfcTagsPage(): JSX.Element {
 
     const filtered = normalisedSearch
       ? tags.filter((tag) =>
-          normaliseForSearch(tag.name).includes(normalisedSearch),
-        )
+        normaliseForSearch(tag.name).includes(normalisedSearch),
+      )
       : tags
 
     return sortTags(filtered, sortMode)
@@ -465,8 +474,49 @@ export default function NfcTagsPage(): JSX.Element {
             <NfcTagDetails
               tag={selectedTag}
               isSaved
+              totalTags={tags.length}
               onClose={() => setSelectedTag(null)}
               onSavedChange={handleTagUpdate}
+              onMoveToPosition={async (tagId, requestedPosition) => {
+                const currentIndex = tags.findIndex((tag) => tag.id === tagId)
+
+                if (currentIndex === -1) {
+                  throw new Error('Tag introuvable dans la liste.')
+                }
+
+                const targetIndex = Math.max(
+                  0,
+                  Math.min(requestedPosition - 1, tags.length - 1),
+                )
+
+                const reordered = [...tags]
+                const [movedTag] = reordered.splice(currentIndex, 1)
+
+                if (!movedTag) {
+                  throw new Error('Impossible de déplacer ce tag.')
+                }
+
+                reordered.splice(targetIndex, 0, movedTag)
+
+                const normalizedOrder = reordered.map((tag, index) => ({
+                  ...tag,
+                  display_order: index + 1,
+                }))
+
+                const previousTags = tags
+                setTags(normalizedOrder)
+                setSelectedTag(
+                  normalizedOrder.find((tag) => tag.id === tagId) ?? null,
+                )
+
+                try {
+                  await updateNfcTagsOrder(normalizedOrder.map((tag) => tag.id))
+                } catch (error) {
+                  setTags(previousTags)
+                  setSelectedTag(previousTags.find((tag) => tag.id === tagId) ?? null)
+                  throw error
+                }
+              }}
             />
           </div>
         </div>

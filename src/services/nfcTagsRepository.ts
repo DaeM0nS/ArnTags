@@ -88,3 +88,39 @@ export async function updateNfcTagsOrder(
     throw failure.error
   }
 }
+
+export async function updateNfcTagFavorite(
+  id: string,
+  isFavorite: boolean,
+): Promise<NfcTag> {
+  const { data, error } = await supabase
+    .from(tableName)
+    .update({ is_favorite: isFavorite })
+    .eq('id', id)
+    .select('*')
+    .single()
+
+  if (error) {
+    throw error
+  }
+
+  return asNfcTag(data)
+}
+
+export async function updateNfcTagPosition(
+  id: string,
+  displayOrder: number,
+): Promise<NfcTag> {
+  const { data, error } = await supabase
+    .from(tableName)
+    .update({ display_order: displayOrder })
+    .eq('id', id)
+    .select('*')
+    .single()
+
+  if (error) {
+    throw error
+  }
+
+  return asNfcTag(data)
+}

@@ -1381,3 +1381,84 @@ p {
     min-width: 0;
   }
 }
+
+.nfc-detail__organize {
+  margin: 1.25rem 0;
+  border-top: 1px solid rgba(164, 111, 255, 0.16);
+  border-bottom: 1px solid rgba(164, 111, 255, 0.16);
+  padding: 1rem 0;
+}
+
+.nfc-detail__organize-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
+  gap: 0.7rem;
+  align-items: end;
+}
+
+.nfc-favorite-button {
+  display: inline-flex;
+  min-height: 2.9rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  border: 1px solid rgba(187, 131, 255, 0.32);
+  border-radius: 0.65rem;
+  background: rgba(70, 27, 134, 0.22);
+  color: #dbc8f7;
+  font-size: 0.8rem;
+  font-weight: 750;
+  transition: transform 180ms ease, background 180ms ease, border-color 180ms ease;
+}
+
+.nfc-favorite-button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  border-color: rgba(237, 196, 82, 0.72);
+  background: rgba(164, 122, 25, 0.24);
+}
+
+.nfc-favorite-button--active {
+  border-color: rgba(255, 211, 92, 0.72);
+  background: rgba(164, 122, 25, 0.28);
+  color: #ffe6a1;
+  box-shadow: 0 0 18px rgba(255, 198, 63, 0.13);
+}
+
+.nfc-favorite-button span {
+  color: #ffd25d;
+  font-size: 1.18rem;
+  line-height: 1;
+}
+
+.nfc-position-field {
+  gap: 0.38rem;
+}
+
+.nfc-position-field__control {
+  display: flex;
+  gap: 0.45rem;
+}
+
+.nfc-position-field__control input {
+  min-width: 0;
+  font-size: 16px;
+}
+
+.nfc-position-field__control .app-button {
+  flex: 0 0 auto;
+  min-height: auto;
+  padding: 0.65rem 0.75rem;
+  font-size: 0.74rem;
+}
+
+.nfc-detail__organize-help {
+  margin: 0.75rem 0 0;
+  color: var(--arn-text-dim);
+  font-size: 0.72rem;
+}
+
+@media (max-width: 480px) {
+  .nfc-detail__organize-grid {
+    grid-template-columns: 1fr;
+  }
+}
