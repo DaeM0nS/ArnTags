@@ -629,8 +629,10 @@ export async function writeNfcTag(
         })
 
         onProgress?.('Écriture terminée.')
-        await cleanup()
         resolve()
+        window.setTimeout(() => {
+          void cleanup()
+        }, 750)
       } catch (error) {
         await cleanup()
 

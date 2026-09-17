@@ -119,7 +119,7 @@ export async function getCurrentBundle() {
 }
 
 export async function getSelfHostedUpdateStatus(channel?: string) {
-    const selectedChannel = (channel || (await getSavedUpdateChannel())).trim();
+    const selectedChannel = (channel || (await getSavedUpdateChannel())) ? (channel || (await getSavedUpdateChannel())).trim() : DEFAULT_CHANNEL;
 
     const manifest = await fetchSelfHostedManifest(selectedChannel);
     const currentBundle = await LiveUpdate.getCurrentBundle().catch(() => ({
