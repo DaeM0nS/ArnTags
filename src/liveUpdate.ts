@@ -4,7 +4,7 @@ import { Dialog } from '@capacitor/dialog';
 
 const UPDATE_CHANNEL_KEY = 'update_channel';
 const UPDATE_CHANNELS_CACHE_KEY = 'update_channels_cache';
-const DEFAULT_CHANNEL = import.meta.env.VITE_BRANCH_NAME;
+const DEFAULT_CHANNEL = import.meta.env.VITE_BRANCH_NAME ?? 'default';
 const LAST_PROMPTED_BUNDLE_KEY = 'liveupdate_last_prompted_bundle';
 
 // URL de base pour les manifests self-hosted
@@ -35,7 +35,7 @@ export async function saveUpdateChannel(channel: string) {
 
 export async function getSavedUpdateChannel() {
     const { value } = await Preferences.get({ key: UPDATE_CHANNEL_KEY });
-    return value?.trim() || DEFAULT_CHANNEL;
+    return value ? value?.trim() : DEFAULT_CHANNEL;
 }
 
 export async function getCurrentUpdateChannel() {

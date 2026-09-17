@@ -5,6 +5,7 @@ import { useAuth } from '../../context/AuthContext'
 import { deleteNfcTag, getNfcTags } from '../../services/nfcTagsRepository'
 import type { NfcTag } from '../../types/nfc'
 import NfcTagDetails from './NfcTagDetails'
+import CreateManualTagModal from './CreateManualTagModal'
 
 function formatDate(value: string): string {
   return new Intl.DateTimeFormat('fr-FR', {
@@ -22,6 +23,7 @@ export default function NfcTagsPage(): JSX.Element {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [showManualModal, setShowManualModal] = useState(false)
 
   const loadTags = useCallback(async (): Promise<void> => {
     setLoading(true)
@@ -71,7 +73,19 @@ export default function NfcTagsPage(): JSX.Element {
           <h1>Mon coffre</h1>
           <p className="nfc-page__subtitle">Tes données NDEF sauvegardées, privées et prêtes à être réécrites.</p>
         </div>
-        <button className="app-button app-button--primary" type="button" onClick={() => navigate('/scanner')}>
+        <button
+          className="app-button app-button--ghost"
+          type="button"
+          onClick={() => setShowManualModal(true)}
+        >
+          + Créer
+        </button>
+
+        <button
+          className="app-button app-button--primary"
+          type="button"
+          onClick={() => navigate('/scanner')}
+        >
           + Scanner
         </button>
       </header>
@@ -127,6 +141,15 @@ export default function NfcTagsPage(): JSX.Element {
           </div>
         </div>
       )}
+      {showManualModal && (
+  <CreateManualTagModal
+    onClose={() => setShowManualModal(false)}
+    onCreated={(createdTag) => {
+      setTags((currentTags) => [createdTag, ...currentTags])
+      setSelectedTag(createdTag)
+    }}
+  />
+)}
     </main>
   )
 }

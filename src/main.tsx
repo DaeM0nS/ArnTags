@@ -16,7 +16,7 @@ import UpdatePasswordPage from './components/auth/UpdatePasswordPage'
 const baseurl = import.meta.env.DEV ? 'http://localhost:5173' : import.meta.env.VITE_APP_SHARE_URL
 const basename = Capacitor.isNativePlatform() ? '/' : import.meta.env.DEV ? '/' : '/ArnTags-Site'
 
-export const branch = import.meta.env.VITE_BRANCH_NAME
+export const branch = import.meta.env.VITE_BRANCH_NAME ?? 'default'
 
 export const color =
   branch === 'dev'

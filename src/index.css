@@ -253,3 +253,46 @@ p { line-height: 1.55; }
     font-size: 16px !important;
   }
 }
+
+.nfc-page__header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.6rem;
+}
+
+.manual-tag-modal {
+  width: min(100%, 34rem);
+  padding: 1.25rem;
+}
+
+.manual-tag-modal__description {
+  margin: 0.75rem 0 1.2rem;
+  color: var(--arn-text-muted);
+  font-size: 0.85rem;
+}
+
+.manual-tag-form {
+  display: grid;
+  gap: 1rem;
+}
+
+.manual-tag-form textarea {
+  min-height: 7rem;
+  resize: vertical;
+}
+
+.manual-tag-form select option {
+  background: #16052f;
+  color: #f5f1ff;
+}
+
+@media (max-width: 440px) {
+  .nfc-page__header-actions {
+    width: 100%;
+  }
+
+  .nfc-page__header-actions .app-button {
+    flex: 1;
+  }
+}

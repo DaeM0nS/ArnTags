@@ -466,8 +466,10 @@ export async function scanNfcTag(
         }
 
         completed = true
-        await cleanup()
         resolve(tag)
+        window.setTimeout(() => {
+          void cleanup()
+        }, 750)
       }
 
       try {
@@ -554,24 +556,138 @@ export async function writeNfcTag(
   onProgress?: (message: string) => void,
 ): Promise<void> {
   if (records.length === 0) {
-    throw new Error('Ce tag sauvegardé ne contient aucun enregistrement NDEF à écrire.')
+    throw new Error(
+      'Ce tag sauvegardé ne contient aucun enregistrement NDEF à écrire.',
+    )
   }
 
-  onProgress?.('Approche un tag NFC NDEF réinscriptible…')
+  if (!Capacitor.isNativePlatform()) {
+    if (!('NDEFReader' in window)) {
+      throw new Error(
+        'Écriture NFC indisponible dans ce navigateur. Utilise l’application native.',
+      )
+    }
 
-  if (Capacitor.isNativePlatform()) {
-    await CapacitorNfc.write({
-      records: records.map(nativeRecordFromRecord),
+    const writer = new NDEFReader()
+
+    onProgress?.('Approche un tag NFC NDEF réinscriptible…')
+
+    await writer.write({
+      records: records.map(webRecordFromRecord),
     })
+
     return
   }
 
-  if (!('NDEFReader' in window)) {
-    throw new Error('Écriture NFC indisponible dans ce navigateur. Utilise l’application native.')
-  }
+  onProgress?.('Approche le tag cible et garde-le immobile sur le téléphone…')
 
-  const writer = new NDEFReader()
-  await writer.write({
-    records: records.map(webRecordFromRecord),
+  return new Promise<void>(async (resolve, reject) => {
+    let ndefListener: { remove: () => Promise<void> } | null = null
+    let tagListener: { remove: () => Promise<void> } | null = null
+    let timeoutId: number | null = null
+    let completed = false
+
+    async function cleanup(): Promise<void> {
+      if (timeoutId !== null) {
+        window.clearTimeout(timeoutId)
+        timeoutId = null
+      }
+
+      await ndefListener?.remove().catch(() => undefined)
+      await tagListener?.remove().catch(() => undefined)
+      await CapacitorNfc.stopScanning().catch(() => undefined)
+    }
+
+    async function fail(error: Error): Promise<void> {
+      if (completed) {
+        return
+      }
+
+      completed = true
+      await cleanup()
+      reject(error)
+    }
+
+    async function writeToCurrentTag(): Promise<void> {
+      if (completed) {
+        return
+      }
+
+      completed = true
+
+      try {
+        onProgress?.('Tag détecté. Écriture en cours, ne le retire pas…')
+
+        /*
+         * Le tag qui vient de déclencher ndefDiscovered/tagDiscovered
+         * est le « last discovered tag » du plugin.
+         *
+         * Il faut appeler write immédiatement ici, avant stopScanning().
+         */
+        await CapacitorNfc.write({
+          records: records.map(nativeRecordFromRecord),
+        })
+
+        onProgress?.('Écriture terminée.')
+        await cleanup()
+        resolve()
+      } catch (error) {
+        await cleanup()
+
+        const errorText =
+          error instanceof Error ? error.message : String(error)
+
+        if (/lost|connection/i.test(errorText)) {
+          reject(
+            new Error(
+              'Connexion NFC perdue. Garde le tag immobile contre le téléphone pendant toute l’écriture, puis réessaie.',
+            ),
+          )
+          return
+        }
+
+        reject(
+          new Error(
+            errorText || 'Impossible d’écrire le contenu NDEF sur ce tag.',
+          ),
+        )
+      }
+    }
+
+    try {
+      /*
+       * On écoute d’abord les événements. Dès qu’un tag cible est découvert,
+       * on écrit immédiatement sur lui.
+       */
+      ndefListener = await CapacitorNfc.addListener(
+        'ndefDiscovered',
+        () => {
+          void writeToCurrentTag()
+        },
+      )
+
+      tagListener = await CapacitorNfc.addListener(
+        'tagDiscovered',
+        () => {
+          void writeToCurrentTag()
+        },
+      )
+
+      timeoutId = window.setTimeout(() => {
+        void fail(
+          new Error(
+            'Aucun tag détecté après 30 secondes. Approche un tag NFC NDEF réinscriptible.',
+          ),
+        )
+      }, 30_000)
+
+      await CapacitorNfc.startScanning()
+    } catch (error) {
+      await fail(
+        error instanceof Error
+          ? error
+          : new Error('Impossible de démarrer la session NFC d’écriture.'),
+      )
+    }
   })
 }
