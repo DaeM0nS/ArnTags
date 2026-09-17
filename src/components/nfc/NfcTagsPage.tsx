@@ -11,6 +11,7 @@ import { useAuth } from '../../context/AuthContext'
 import {
   deleteNfcTag,
   getNfcTags,
+  updateNfcTagFavorite,
   updateNfcTagsOrder,
 } from '../../services/nfcTagsRepository'
 import { resetNfcTag } from '../../services/nfcService'
@@ -94,6 +95,8 @@ export default function NfcTagsPage(): JSX.Element {
   const [showResetConfirm, setShowResetConfirm] = useState(false)
   const [resetLoading, setResetLoading] = useState(false)
   const [resetStatus, setResetStatus] = useState<string | null>(null)
+
+  const [favoriteUpdatingId, setFavoriteUpdatingId] = useState<string | null>(null)
 
   const loadTags = useCallback(async (): Promise<void> => {
     setLoading(true)
@@ -260,6 +263,59 @@ export default function NfcTagsPage(): JSX.Element {
     }
   }
 
+  async function handleToggleFavorite(tag: NfcTag): Promise<void> {
+    setFavoriteUpdatingId(tag.id)
+    setError(null)
+
+    /* Mise à jour optimiste : l’étoile et l’ordre changent immédiatement. */
+    const previousTags = tags
+    const nextFavoriteState = !tag.is_favorite
+
+    setTags((currentTags) =>
+      currentTags.map((currentTag) =>
+        currentTag.id === tag.id
+          ? { ...currentTag, is_favorite: nextFavoriteState }
+          : currentTag,
+      ),
+    )
+
+    if (selectedTag?.id === tag.id) {
+      setSelectedTag((currentTag) =>
+        currentTag
+          ? { ...currentTag, is_favorite: nextFavoriteState }
+          : currentTag,
+      )
+    }
+
+    try {
+      const updatedTag = await updateNfcTagFavorite(tag.id, nextFavoriteState)
+
+      setTags((currentTags) =>
+        currentTags.map((currentTag) =>
+          currentTag.id === updatedTag.id ? updatedTag : currentTag,
+        ),
+      )
+
+      if (selectedTag?.id === updatedTag.id) {
+        setSelectedTag(updatedTag)
+      }
+    } catch (favoriteError) {
+      setTags(previousTags)
+
+      if (selectedTag?.id === tag.id) {
+        setSelectedTag(tag)
+      }
+
+      setError(
+        favoriteError instanceof Error
+          ? favoriteError.message
+          : 'Impossible de modifier le favori.',
+      )
+    } finally {
+      setFavoriteUpdatingId(null)
+    }
+  }
+
   return (
     <main className="app-page nfc-page">
       <header className="nfc-page__header">
@@ -421,11 +477,34 @@ export default function NfcTagsPage(): JSX.Element {
 
                   <div className="nfc-tag-card__side-actions">
                     <button
+                      className={`nfc-tag-card__favorite${tag.is_favorite ? ' nfc-tag-card__favorite--active' : ''}`}
+                      type="button"
+                      disabled={favoriteUpdatingId === tag.id || ordering || deletingId === tag.id}
+                      onClick={(event) => {
+                        event.stopPropagation()
+                        void handleToggleFavorite(tag)
+                      }}
+                      aria-label={
+                        tag.is_favorite
+                          ? `Retirer ${tag.name} des favoris`
+                          : `Ajouter ${tag.name} aux favoris`
+                      }
+                      aria-pressed={tag.is_favorite}
+                      title={tag.is_favorite ? 'Retirer des favoris' : 'Ajouter aux favoris'}
+                    >
+                      {favoriteUpdatingId === tag.id ? '…' : tag.is_favorite ? '★' : '☆'}
+                    </button>
+
+                    <button
                       className="nfc-tag-card__delete"
                       type="button"
-                      disabled={deletingId === tag.id || ordering}
-                      onClick={() => void handleDelete(tag)}
+                      disabled={deletingId === tag.id || ordering || favoriteUpdatingId === tag.id}
+                      onClick={(event) => {
+                        event.stopPropagation()
+                        void handleDelete(tag)
+                      }}
                       aria-label={`Supprimer ${tag.name}`}
+                      title="Supprimer"
                     >
                       {deletingId === tag.id ? '…' : '×'}
                     </button>
@@ -434,18 +513,30 @@ export default function NfcTagsPage(): JSX.Element {
                       <div className="nfc-tag-card__order-actions">
                         <button
                           type="button"
-                          disabled={ordering || index === 0}
-                          onClick={() => void handleMoveTag(tag.id, 'up')}
+                          disabled={ordering || index === 0 || favoriteUpdatingId === tag.id}
+                          onClick={(event) => {
+                            event.stopPropagation()
+                            void handleMoveTag(tag.id, 'up')
+                          }}
                           aria-label={`Monter ${tag.name}`}
+                          title="Monter"
                         >
                           ↑
                         </button>
 
                         <button
                           type="button"
-                          disabled={ordering || index === visibleTags.length - 1}
-                          onClick={() => void handleMoveTag(tag.id, 'down')}
+                          disabled={
+                            ordering ||
+                            index === visibleTags.length - 1 ||
+                            favoriteUpdatingId === tag.id
+                          }
+                          onClick={(event) => {
+                            event.stopPropagation()
+                            void handleMoveTag(tag.id, 'down')
+                          }}
                           aria-label={`Descendre ${tag.name}`}
+                          title="Descendre"
                         >
                           ↓
                         </button>

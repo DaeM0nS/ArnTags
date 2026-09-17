@@ -1462,3 +1462,41 @@ p {
     grid-template-columns: 1fr;
   }
 }
+
+.nfc-tag-card__favorite {
+  display: grid;
+  width: 1.8rem;
+  height: 1.8rem;
+  place-items: center;
+  border: 1px solid rgba(190, 135, 255, 0.26);
+  border-radius: 50%;
+  background: rgba(39, 14, 81, 0.58);
+  color: #c7a9ef;
+  font-size: 1.16rem;
+  line-height: 1;
+  transition:
+    transform 180ms ease,
+    background 180ms ease,
+    border-color 180ms ease,
+    color 180ms ease;
+}
+
+.nfc-tag-card__favorite:hover:not(:disabled) {
+  transform: scale(1.08);
+  border-color: rgba(255, 214, 97, 0.65);
+  background: rgba(142, 97, 20, 0.26);
+  color: #ffe69b;
+}
+
+.nfc-tag-card__favorite--active {
+  border-color: rgba(255, 211, 88, 0.72);
+  background: rgba(156, 107, 20, 0.34);
+  color: #ffd85e;
+  text-shadow: 0 0 12px rgba(255, 202, 69, 0.74);
+  box-shadow: 0 0 16px rgba(255, 193, 46, 0.16);
+}
+
+.nfc-tag-card__favorite:disabled {
+  cursor: wait;
+  opacity: 0.58;
+}
