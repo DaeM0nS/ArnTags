@@ -73,6 +73,7 @@ export default function NfcScannerPage(): JSX.Element {
 
       setStatus(`« ${saved.name} » a été ajouté à ton coffre.`)
       setScanState('read')
+      navigate('/tags')
     } catch (error) {
       setStatus(error instanceof Error ? error.message : 'Impossible de sauvegarder le tag.')
       setScanState('read')
@@ -111,31 +112,49 @@ export default function NfcScannerPage(): JSX.Element {
       </section>
 
       {tag && (
-        <section className="nfc-scan-result app-surface">
-          <div className="nfc-scan-result__header">
-            <div>
-              <p className="app-eyebrow">DONNÉES LUES</p>
-              <h2>Contenu NDEF</h2>
+          <form
+            className="nfc-scan-result app-surface"
+            onSubmit={(event) => {
+              event.preventDefault()
+              void handleSave()
+            }}
+          >
+            <div className="nfc-scan-result__header">
+              <div>
+                <p className="app-eyebrow">DONNÉES LUES</p>
+                <h2>Contenu NDEF</h2>
+              </div>
+
+              <span>{tag.records.length} record(s)</span>
             </div>
-            <span>{tag.records.length} record(s)</span>
-          </div>
 
-          <label className="app-field">
-            <span>Nom dans le coffre</span>
-            <input value={name} onChange={(event) => setName(event.target.value)} maxLength={80} />
-          </label>
+            <label className="app-field">
+              <span>Nom dans le coffre</span>
 
-          <NdefRecordsList records={tag.records} />
+              <input
+                value={name}
+                onChange={(event) => setName(event.target.value)}
+                maxLength={80}
+                enterKeyHint="done"
+                autoComplete="off"
+                autoFocus
+              />
+            </label>
 
-          <div className="nfc-scan-result__actions">
-            <button className="app-button app-button--ghost" type="button" disabled={scanState === 'saving'} onClick={() => navigate('/tags')}>
-              Voir mon coffre
-            </button>
-            <button className="app-button app-button--primary" type="button" disabled={scanState === 'saving'} onClick={() => void handleSave()}>
-              {scanState === 'saving' ? 'Sauvegarde…' : 'Sauvegarder le tag'}
-            </button>
-          </div>
-        </section>
+            <NdefRecordsList records={tag.records} />
+
+            <div className="nfc-scan-result__actions">
+              <button
+                className="app-button app-button--primary"
+                type="submit"
+                disabled={scanState === 'saving'}
+              >
+                {scanState === 'saving'
+                  ? 'Sauvegarde…'
+                  : 'Sauvegarder le tag'}
+              </button>
+            </div>
+          </form>
       )}
 
       {scanState === 'scanning' && <NfcScanOverlay message={status ?? 'Approche le tag du téléphone…'} />}
