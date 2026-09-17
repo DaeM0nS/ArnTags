@@ -81,7 +81,7 @@ export function findArntrealProfileUrl(tag: NfcTag): string | null {
         /^\/effect\/[0-9a-f-]{36}\/?$/i.test(url.pathname)
       ) {
         const id = url.pathname
-          .replace(/^\/id\//i, '')
+          .replace(/^\/effect\//i, '')
           .replace(/\/$/, '')
 
         return `https://profile.arntreal.com/${id}`
