@@ -1,67 +1,46 @@
 package fr.pixelmon_france.daem0ns.arntags;
 
+import android.content.Intent;
 import android.nfc.NfcAdapter;
-import android.nfc.Tag;
 import android.os.Bundle;
 
 import com.getcapacitor.BridgeActivity;
 
 public class MainActivity extends BridgeActivity {
 
-    private NfcAdapter nfcAdapter;
-
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        nfcAdapter = NfcAdapter.getDefaultAdapter(this);
+        consumeNfcIntent(getIntent());
     }
 
     @Override
-    public void onResume() {
-        super.onResume();
+    public void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
 
-        if (nfcAdapter == null) {
+        consumeNfcIntent(intent);
+    }
+
+    private void consumeNfcIntent(Intent intent) {
+        if (intent == null) {
             return;
         }
 
-        /*
-         * Reader Mode donne la priorité à cette Activity quand elle est
-         * affichée. Android ne traite donc pas une URL NDEF comme un lien
-         * à ouvrir dans le navigateur pendant que arntags est au premier plan.
-         *
-         * Le plugin @capgo/capacitor-nfc reste responsable de l’envoi des
-         * événements `tagDiscovered` / `ndefDiscovered` vers TypeScript.
-         */
-        nfcAdapter.enableReaderMode(
-            this,
-            new NfcAdapter.ReaderCallback() {
-                @Override
-                public void onTagDiscovered(Tag tag) {
-                    /*
-                     * Ne rien lire ni écrire ici.
-                     * Le plugin Capacitor est censé gérer les tags et transmettre
-                     * les événements au frontend.
-                     *
-                     * Ce callback sert uniquement à empêcher Android de dispatcher
-                     * automatiquement les tags URL vers le navigateur.
-                     */
-                }
-            },
-            NfcAdapter.FLAG_READER_NFC_A
-                | NfcAdapter.FLAG_READER_NFC_B
-                | NfcAdapter.FLAG_READER_NFC_F
-                | NfcAdapter.FLAG_READER_NFC_V,
-            null
-        );
-    }
+        String action = intent.getAction();
 
-    @Override
-    public void onPause() {
-        if (nfcAdapter != null) {
-            nfcAdapter.disableReaderMode(this);
+        if (
+            NfcAdapter.ACTION_NDEF_DISCOVERED.equals(action)
+                || NfcAdapter.ACTION_TAG_DISCOVERED.equals(action)
+                || NfcAdapter.ACTION_TECH_DISCOVERED.equals(action)
+        ) {
+            /*
+             * Empêche l'intent NFC URL de déclencher une navigation extérieure.
+             * Le plugin Capacitor NFC reçoit toujours la session de lecture
+             * via son propre mécanisme de scan.
+             */
+            intent.setAction(null);
+            intent.setData(null);
         }
-
-        super.onPause();
     }
 }
