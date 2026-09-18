@@ -13,10 +13,10 @@ import AppLayout from './layouts/AppLayout'
 import ProfilePage from './components/profile/ProfilePage'
 import UpdatePasswordPage from './components/auth/UpdatePasswordPage'
 
-export const VITE_APP_SHARE_URL = "https://daem0ns.github.io/ArnTags";
+export const VITE_APP_SHARE_URL = "https://daem0ns.github.io/Arntags";
 
 const baseurl = import.meta.env.DEV ? 'http://localhost:5173' : VITE_APP_SHARE_URL
-const basename = Capacitor.isNativePlatform() ? '/' : import.meta.env.DEV ? '/' : '/ArnTags'
+const basename = Capacitor.isNativePlatform() ? '/' : import.meta.env.DEV ? '/' : '/Arntags'
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
