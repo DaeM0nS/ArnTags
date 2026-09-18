@@ -2069,3 +2069,254 @@ p {
     align-items: flex-end;
   }
 }
+
+.pwa-install-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.7rem;
+  min-height: 3.1rem;
+  padding: 0.65rem 0.95rem;
+  text-align: left;
+}
+
+.pwa-install-button:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.pwa-install-button__icon {
+  display: grid;
+  width: 2rem;
+  height: 2rem;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.26);
+  border-radius: 0.65rem;
+  background: rgba(255, 255, 255, 0.12);
+  font-size: 1.25rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.pwa-install-button__text {
+  display: grid;
+  gap: 0.06rem;
+}
+
+.pwa-install-button__text > span {
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+}
+
+.pwa-install-button__text small {
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 0.61rem;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.pwa-install-error {
+  margin-top: 0.7rem;
+}
+
+.pwa-install-backdrop {
+  z-index: 1000;
+  padding: 1rem;
+  background: rgba(3, 0, 12, 0.76);
+  backdrop-filter: blur(10px);
+}
+
+.pwa-install-dialog {
+  width: min(100%, 31rem);
+  max-height: min(44rem, calc(100dvh - 2rem));
+  overflow-y: auto;
+  border: 1px solid rgba(173, 112, 255, 0.3);
+  border-radius: 1.35rem;
+  background:
+    radial-gradient(
+      circle at top right,
+      rgba(165, 82, 255, 0.16),
+      transparent 42%
+    ),
+    rgba(12, 3, 32, 0.98);
+  box-shadow:
+    0 1.5rem 5rem rgba(0, 0, 0, 0.64),
+    0 0 2.5rem rgba(138, 77, 255, 0.16);
+}
+
+.pwa-install-dialog__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.15rem 1.15rem 1rem;
+  border-bottom: 1px solid rgba(173, 112, 255, 0.16);
+}
+
+.pwa-install-dialog__brand {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.pwa-install-dialog__brand-icon {
+  display: grid;
+  width: 2.7rem;
+  height: 2.7rem;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid rgba(202, 145, 255, 0.42);
+  border-radius: 0.85rem;
+  background:
+    radial-gradient(
+      circle at 32% 28%,
+      rgba(255, 255, 255, 0.42),
+      transparent 26%
+    ),
+    linear-gradient(135deg, #7651e8, #b34cff);
+  color: #fff;
+  font-size: 1.45rem;
+  font-weight: 900;
+  box-shadow: 0 0.55rem 1.3rem rgba(137, 72, 255, 0.28);
+}
+
+.pwa-install-dialog__brand h2 {
+  margin: 0.08rem 0 0;
+  color: #faf7ff;
+  font-size: 1.12rem;
+  line-height: 1.2;
+}
+
+.pwa-install-dialog__close {
+  display: grid;
+  width: 2.25rem;
+  height: 2.25rem;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid rgba(173, 112, 255, 0.18);
+  border-radius: 0.7rem;
+  background: rgba(255, 255, 255, 0.055);
+  color: #d9b8ff;
+  cursor: pointer;
+  font-size: 1.35rem;
+  line-height: 1;
+  transition:
+    background 0.16s ease,
+    border-color 0.16s ease,
+    color 0.16s ease;
+}
+
+.pwa-install-dialog__close:hover,
+.pwa-install-dialog__close:focus-visible {
+  border-color: rgba(213, 169, 255, 0.52);
+  background: rgba(179, 76, 255, 0.16);
+  color: #fff;
+  outline: none;
+}
+
+.pwa-install-dialog__intro {
+  margin: 0;
+  padding: 1rem 1.15rem 0;
+  color: var(--arn-text-muted);
+  font-size: 0.85rem;
+  line-height: 1.55;
+}
+
+.pwa-install-dialog__steps {
+  display: grid;
+  gap: 0.65rem;
+  padding: 1.1rem 1.15rem;
+}
+
+.pwa-install-step {
+  display: grid;
+  grid-template-columns: 2rem minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.7rem;
+  min-width: 0;
+  padding: 0.78rem;
+  border: 1px solid rgba(173, 112, 255, 0.15);
+  border-radius: 0.9rem;
+  background: rgba(5, 0, 18, 0.34);
+}
+
+.pwa-install-step__number {
+  display: grid;
+  width: 2rem;
+  height: 2rem;
+  place-items: center;
+  border: 1px solid rgba(198, 140, 255, 0.35);
+  border-radius: 999px;
+  background: rgba(153, 80, 255, 0.16);
+  color: #dfc5ff;
+  font-size: 0.76rem;
+  font-weight: 850;
+}
+
+.pwa-install-step strong {
+  display: block;
+  margin-bottom: 0.17rem;
+  color: #f5eeff;
+  font-size: 0.78rem;
+  line-height: 1.25;
+}
+
+.pwa-install-step p {
+  margin: 0;
+  color: var(--arn-text-dim);
+  font-size: 0.69rem;
+  line-height: 1.4;
+}
+
+.pwa-install-step__symbol {
+  display: grid;
+  width: 1.9rem;
+  height: 1.9rem;
+  place-items: center;
+  color: #d8aeff;
+  font-size: 1.15rem;
+  font-weight: 800;
+  opacity: 0.88;
+}
+
+.pwa-install-dialog__footer {
+  display: grid;
+  gap: 0.85rem;
+  padding: 1rem 1.15rem 1.15rem;
+  border-top: 1px solid rgba(173, 112, 255, 0.16);
+}
+
+.pwa-install-dialog__footer p {
+  margin: 0;
+  color: var(--arn-text-dim);
+  font-size: 0.69rem;
+  line-height: 1.45;
+}
+
+.pwa-install-dialog__footer .app-button {
+  width: 100%;
+}
+
+@media (max-width: 420px) {
+  .pwa-install-button {
+    width: 100%;
+  }
+
+  .pwa-install-dialog__header,
+  .pwa-install-dialog__intro,
+  .pwa-install-dialog__steps,
+  .pwa-install-dialog__footer {
+    padding-left: 0.95rem;
+    padding-right: 0.95rem;
+  }
+
+  .pwa-install-step {
+    grid-template-columns: 1.85rem minmax(0, 1fr);
+  }
+
+  .pwa-install-step__symbol {
+    display: none;
+  }
+}

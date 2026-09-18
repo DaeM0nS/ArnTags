@@ -22,6 +22,7 @@ import {
 import { Dialog } from '@capacitor/dialog';
 import { Capacitor } from '@capacitor/core';
 import { color, VITE_APP_SHARE_URL } from '../main';
+import InstallPwaButton from './InstallPwaButton';
 
 type AuthView = 'login' | 'signup' | 'forgot-password'
 
@@ -661,6 +662,7 @@ const refreshDebugInfo = async () => {
               Retour à la connexion
             </button>
           )}
+          <InstallPwaButton />
         </div>
       </section>
     </main>
