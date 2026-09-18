@@ -21,12 +21,12 @@ import {
 } from '../liveUpdate';
 import { Dialog } from '@capacitor/dialog';
 import { Capacitor } from '@capacitor/core';
-import { color } from '../main';
+import { color, VITE_APP_SHARE_URL } from '../main';
 
 type AuthView = 'login' | 'signup' | 'forgot-password'
 
 function getResetRedirectUrl(): string {
-  const appUrl = import.meta.env.VITE_APP_SHARE_URL?.replace(/\/$/, '')
+  const appUrl = VITE_APP_SHARE_URL?.replace(/\/$/, '')
   return `${appUrl || window.location.origin}/update-password`
 }
 

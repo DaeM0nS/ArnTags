@@ -13,8 +13,27 @@ import AppLayout from './layouts/AppLayout'
 import ProfilePage from './components/profile/ProfilePage'
 import UpdatePasswordPage from './components/auth/UpdatePasswordPage'
 
-const baseurl = import.meta.env.DEV ? 'http://localhost:5173' : import.meta.env.VITE_APP_SHARE_URL
+export const VITE_APP_SHARE_URL = "https://daem0ns.github.io/ArnTags";
+
+const baseurl = import.meta.env.DEV ? 'http://localhost:5173' : VITE_APP_SHARE_URL
 const basename = Capacitor.isNativePlatform() ? '/' : import.meta.env.DEV ? '/' : '/ArnTags'
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker
+      .register(baseurl + '/sw.js', {
+        scope: baseurl + '/',
+      })
+      .then((registration) => {
+        console.log('✅ Service worker enregistré',
+          registration.scope
+        );
+      })
+      .catch((error) => {
+        console.error('❌ Erreur service worker:', error);
+      });
+  });
+}
 
 export const branch = import.meta.env.VITE_BRANCH_NAME ?? 'default'
 
