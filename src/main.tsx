@@ -14,7 +14,7 @@ import ProfilePage from './components/profile/ProfilePage'
 import UpdatePasswordPage from './components/auth/UpdatePasswordPage'
 
 const baseurl = import.meta.env.DEV ? 'http://localhost:5173' : import.meta.env.VITE_APP_SHARE_URL
-const basename = Capacitor.isNativePlatform() ? '/' : import.meta.env.DEV ? '/' : '/Arntags'
+const basename = Capacitor.isNativePlatform() ? '/' : import.meta.env.DEV ? '/' : '/ArnTags'
 
 export const branch = import.meta.env.VITE_BRANCH_NAME ?? 'default'
 
@@ -50,7 +50,7 @@ class AppErrorBoundary extends React.Component<
   }
 
   componentDidCatch(error: Error): void {
-    console.error('[arntags] Erreur de rendu :', error)
+    console.error('[ArnTags] Erreur de rendu :', error)
   }
 
   render(): ReactNode {
@@ -69,7 +69,7 @@ class AppErrorBoundary extends React.Component<
 }
 
 function LoadingScreen() {
-  return <div className="app-loading">Chargement d’arntags…</div>
+  return <div className="app-loading">Chargement d’ArnTags…</div>
 }
 
 function AuthRoute({ children }: { children: React.ReactElement }) {

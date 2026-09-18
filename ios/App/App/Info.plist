@@ -7,7 +7,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleDisplayName</key>
-        <string>arntags</string>
+        <string>ArnTags</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -67,6 +67,6 @@
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
 	<key>NFCReaderUsageDescription</key>
-	<string>arntags utilise le NFC pour lire et écrire vos tags NDEF.</string>
+	<string>ArnTags utilise le NFC pour lire et écrire vos tags NDEF.</string>
 </dict>
 </plist>

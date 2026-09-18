@@ -9,7 +9,7 @@ export default defineConfig(({ mode }) => {
     //    base: isNative ? './' : '/Arntags/',
     // base: './',
     base: mode === 'github-pages'
-      ? '/Arntags/'
+      ? '/ArnTags/'
       : '/',
     build: {
       target: 'es2019',

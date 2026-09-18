@@ -444,7 +444,7 @@ export async function scanNfcTag(
           return
         }
 
-        console.info('[arntags] NFC event reçu :', event)
+        console.info('[ArnTags] NFC event reçu :', event)
 
         const tag = normaliseNativeTag(event)
 
@@ -459,7 +459,7 @@ export async function scanNfcTag(
 
         if (!hasRealTag) {
           console.warn(
-            '[arntags] Événement NFC ignoré : tag sans UID ni records.',
+            '[ArnTags] Événement NFC ignoré : tag sans UID ni records.',
             event,
           )
           return

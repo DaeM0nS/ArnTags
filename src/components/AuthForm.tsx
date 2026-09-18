@@ -606,7 +606,7 @@ const refreshDebugInfo = async () => {
           )}
         <div className="auth-card__symbol" aria-hidden="true">⌁</div>
         <p className="app-eyebrow">ARNTREAL / NFC VAULT</p>
-        <h1 id="auth-title">arntags</h1>
+        <h1 id="auth-title">ArnTags</h1>
         <p className="auth-card__subtitle">
           {isForgotPassword ? 'Réinitialise l’accès à ton coffre NFC.' : 'Stocke et réécris tes tags NFC compatibles.'}
         </p>
