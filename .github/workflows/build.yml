@@ -31,13 +31,26 @@ jobs:
       - name: 📦 Create ZIP Archive
         run: |
           cd dist
-          zip -r ../Arntags-Site.zip .
+          zip -r ../Arntags.zip .
 
       - name: 📤 Upload ZIP Artifact
         uses: actions/upload-artifact@v4
         with:
           name: site-archive
-          path: Arntags-Site.zip
+          path: Arntags.zip
+
+      - name: Build project
+        run: npm run build:pages
+
+      - name: 🚀 Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: gh-pages  # ou gh-pages
+          publish_dir: ./dist
+          force_orphan: true    # Nouvelle histoire Git
+          user_name: 'GitHub Actions'
+          user_email: 'action@github.com'
   android:
     name: Build Android APK
     runs-on: ubuntu-latest

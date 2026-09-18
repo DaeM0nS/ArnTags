@@ -7,6 +7,7 @@ import { isNfcAvailable, scanNfcTag } from '../../services/nfcService'
 import type { NfcTag, ScannedNfcTag } from '../../types/nfc'
 import NdefRecordsList from './NdefRecordsList'
 import NfcScanOverlay from './NfcScanOverlay'
+import { tryAttachArntrealProfile } from '../../services/nfcTagsRepository'
 
 type ScanState = 'idle' | 'scanning' | 'read' | 'saving'
 
@@ -72,6 +73,21 @@ export default function NfcScannerPage(): JSX.Element {
         display_order: 0,
       })
 
+
+      // Après avoir créé le tag et obtenu createdTag :
+      const attached = await tryAttachArntrealProfile(saved)
+
+      if (attached) {
+        // createdTag a maintenant profile_data rempli
+        // setTags((current) =>
+        //   current.map((t) => (t.id === attached.id ? attached : t)),
+        // )
+
+        // if (selectedTag?.id === attached.id) {
+        //   setSelectedTag(attached)
+        // }
+      }
+
       setStatus(`« ${saved.name} » a été ajouté à ton coffre.`)
       setScanState('read')
       navigate('/tags')
@@ -113,49 +129,49 @@ export default function NfcScannerPage(): JSX.Element {
       </section>
 
       {tag && (
-          <form
-            className="nfc-scan-result app-surface"
-            onSubmit={(event) => {
-              event.preventDefault()
-              void handleSave()
-            }}
-          >
-            <div className="nfc-scan-result__header">
-              <div>
-                <p className="app-eyebrow">DONNÉES LUES</p>
-                <h2>Contenu NDEF</h2>
-              </div>
-
-              <span>{tag.records.length} record(s)</span>
+        <form
+          className="nfc-scan-result app-surface"
+          onSubmit={(event) => {
+            event.preventDefault()
+            void handleSave()
+          }}
+        >
+          <div className="nfc-scan-result__header">
+            <div>
+              <p className="app-eyebrow">DONNÉES LUES</p>
+              <h2>Contenu NDEF</h2>
             </div>
 
-            <label className="app-field">
-              <span>Nom dans le coffre</span>
+            <span>{tag.records.length} record(s)</span>
+          </div>
 
-              <input
-                value={name}
-                onChange={(event) => setName(event.target.value)}
-                maxLength={80}
-                enterKeyHint="done"
-                autoComplete="off"
-                autoFocus
-              />
-            </label>
+          <label className="app-field">
+            <span>Nom dans le coffre</span>
 
-            <NdefRecordsList records={tag.records} />
+            <input
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+              maxLength={80}
+              enterKeyHint="done"
+              autoComplete="off"
+              autoFocus
+            />
+          </label>
 
-            <div className="nfc-scan-result__actions">
-              <button
-                className="app-button app-button--primary"
-                type="submit"
-                disabled={scanState === 'saving'}
-              >
-                {scanState === 'saving'
-                  ? 'Sauvegarde…'
-                  : 'Sauvegarder le tag'}
-              </button>
-            </div>
-          </form>
+          <NdefRecordsList records={tag.records} />
+
+          <div className="nfc-scan-result__actions">
+            <button
+              className="app-button app-button--primary"
+              type="submit"
+              disabled={scanState === 'saving'}
+            >
+              {scanState === 'saving'
+                ? 'Sauvegarde…'
+                : 'Sauvegarder le tag'}
+            </button>
+          </div>
+        </form>
       )}
 
       {scanState === 'scanning' && <NfcScanOverlay message={status ?? 'Approche le tag du téléphone…'} />}

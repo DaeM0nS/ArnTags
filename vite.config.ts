@@ -6,10 +6,10 @@ export default defineConfig(({ mode }) => {
   // const isNative = mode === 'native'
 
   return {
-    //    base: isNative ? './' : '/Arntags-Site/',
+    //    base: isNative ? './' : '/Arntags/',
     // base: './',
     base: mode === 'github-pages'
-      ? '/Arntags-Site/'
+      ? '/Arntags/'
       : '/',
     build: {
       target: 'es2019',

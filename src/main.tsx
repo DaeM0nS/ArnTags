@@ -14,7 +14,7 @@ import ProfilePage from './components/profile/ProfilePage'
 import UpdatePasswordPage from './components/auth/UpdatePasswordPage'
 
 const baseurl = import.meta.env.DEV ? 'http://localhost:5173' : import.meta.env.VITE_APP_SHARE_URL
-const basename = Capacitor.isNativePlatform() ? '/' : import.meta.env.DEV ? '/' : '/ArnTags-Site'
+const basename = Capacitor.isNativePlatform() ? '/' : import.meta.env.DEV ? '/' : '/Arntags'
 
 export const branch = import.meta.env.VITE_BRANCH_NAME ?? 'default'
 

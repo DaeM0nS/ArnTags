@@ -153,9 +153,9 @@ export async function fetchArntrealProfile(
   ) {
     const details =
       data &&
-      typeof data === 'object' &&
-      'error' in data &&
-      typeof data.error === 'string'
+        typeof data === 'object' &&
+        'error' in data &&
+        typeof data.error === 'string'
         ? data.error
         : 'Réponse Arntreal invalide.'
 
@@ -224,4 +224,42 @@ export async function refreshAllArntrealProfiles(): Promise<void> {
       }
     }),
   )
+}
+
+export async function tryAttachArntrealProfile(
+  tag: NfcTag,
+): Promise<NfcTag | null> {
+  // On ne traite que les tags stockés (avec id)
+  if (!('id' in tag) || !tag.id) {
+    return null
+  }
+
+  // Si le tag a déjà un profil récent, on skip
+  if (tag.profile_data?.connected) {
+    return tag
+  }
+
+  const profileUrl = findArntrealProfileUrl(tag)
+
+  if (!profileUrl) {
+    return null
+  }
+
+  try {
+    const profile = await fetchArntrealProfile(profileUrl)
+
+    if (!profile.connected) {
+      return null
+    }
+
+    const updated = await updateNfcTagProfile(tag.id, profile)
+
+    return updated
+  } catch (error) {
+    console.warn(
+      `Impossible d'attacher le profil Arntreal au tag ${tag.id}.`,
+      error,
+    )
+    return null
+  }
 }

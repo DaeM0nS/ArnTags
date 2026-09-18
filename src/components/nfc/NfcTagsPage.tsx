@@ -324,7 +324,7 @@ export default function NfcTagsPage(): JSX.Element {
       <header className="nfc-page__header">
         <div>
           <p className="app-eyebrow">ARNTREAL / NFC VAULT</p>
-          <h1>Mon coffre</h1>
+          <h1>Mes tags NFC</h1>
           <p className="nfc-page__subtitle">
             Tes données NDEF sauvegardées, privées et prêtes à être réécrites.
           </p>
