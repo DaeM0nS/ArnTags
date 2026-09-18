@@ -3,7 +3,7 @@ import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
   appId: 'fr.pixelmon_france.daem0ns.arntags',
-  appName: 'ArnTags',
+  appName: 'Arntags',
   webDir: 'dist',
   ios: {
     contentInset: 'automatic'
