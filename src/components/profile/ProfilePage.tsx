@@ -7,6 +7,7 @@ import { Dialog } from '@capacitor/dialog';
 import ChangePasswordForm from './ChangePasswordForm'
 
 import { useAuth } from '../../context/AuthContext'
+import InstallPwaButton from '../InstallPwaButton';
 
 export default function ProfilePage() {
   const navigate = useNavigate()
@@ -365,6 +366,7 @@ export default function ProfilePage() {
         <h2 className="text-xl font-bold text-gray-800 mb-2">
           ⚙️ Préférences
         </h2>
+        <InstallPwaButton />
         <div><button
           type="button"
           onClick={() => setShowSettings(v => !v)}
